@@ -6,4 +6,4 @@ typedef struct{
     int ano;
     char sub[255];
 }TF;
-
+int ler_pessoa(FILE *f, TP *p);
