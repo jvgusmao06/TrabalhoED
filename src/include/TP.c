@@ -3,10 +3,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-int ler_pessoa(char *arq, TP *p) {
-    FILE *f = fopen(arq, "r");
+
+// Funcao le uma pessoa, passando se o ponteiro do arquivo como parametro
+int ler_pessoa(FILE *f, TP *p) {
     if(!f){
-        printf("Ocorreu um erro ao ler o arquivo %s. Funcao ler_pessoa na TP.c\n", arq);
+        printf("Erro no arquivo da funcao ler pessoa!\n");
         exit(1);
     }
     
@@ -42,11 +43,10 @@ int ler_pessoa(char *arq, TP *p) {
                     p->ano = anoint;
                 }
             }
-            fclose(f);
+            
             return 1; // Retorna 1 se tiver sucesso lendo a pessoa
         }
     }
 
-    fclose(f); 
     return 0;
 }
