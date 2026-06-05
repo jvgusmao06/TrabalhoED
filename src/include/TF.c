@@ -1,3 +1,5 @@
+#include "../header/TF.h"
+
 int ler_filme(FILE *f, TF *p) {
     if(!f){
         printf("Erro no arquivo da funcao ler_filme!\n");

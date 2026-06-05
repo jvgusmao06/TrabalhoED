@@ -1,7 +1,5 @@
 #include "../header/TP.h"
 #include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
 
 
 // Funcao le uma pessoa, passando se o ponteiro do arquivo como parametro
