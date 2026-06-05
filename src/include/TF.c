@@ -1,4 +1,4 @@
-
+#include "../header/TF.h"
 
 int ler_filme(FILE *f, TF *p) {
     if(!f){

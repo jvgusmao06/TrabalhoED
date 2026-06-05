@@ -12,11 +12,10 @@ typedef struct{
 } TConfig;
 
 typedef struct folha{
-    int val; // valido(1) ou invalido(0)
     int *tipo; // PESSOA(1) ou FILME(2)
     int nchaves; 
     TD **entidades;
-    char **prox;
+    char *prox;
 } TFOLHA;
 
 typedef struct no{
@@ -26,7 +25,7 @@ typedef struct no{
     char **ids;
     long *filhos;
     char **arq_folha;
-} NoIndice;
+} TARVBMS;
 
 void TARVBMS_cria();
 void TARVBMS_inicializa();
