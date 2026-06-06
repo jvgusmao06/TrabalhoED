@@ -1,8 +1,29 @@
 #include <stdio.h>
 
-typedef struct{
-    int id;
+typedef enum {
+    TIPO_PESSOA,
+    TIPO_FILME
+} TipoEntidade;
+
+typedef struct {
     char nome[100];
     int ano;
-    char sub[255];
-}TD;
+} TP; // Tipo Pessoa
+
+typedef struct {
+    char titulo[100];
+    int ano;
+    char sub[200];
+} TF; // Tipo Filme
+
+// Struct unificada
+typedef struct {
+    TipoEntidade tipo; // Identificador de qual dado está preenchido
+    union {
+        TP pessoa;
+        TF filme;
+    } dados;
+} TD;
+
+
+int ler_entidade(FILE *f, TD *e);
