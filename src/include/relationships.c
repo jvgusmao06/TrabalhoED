@@ -2,12 +2,20 @@
 #include <string.h>
 
 int hashit(char* nome){
+    char copia[100];
+    strncpy(copia, nome, sizeof(copia) - 1);
+    copia[99] = '\0';
+
+    char* str = copia;
+    for(int i = 0; str[i] != '\0'; i++)
+        str[i] = tolower(str[i]);
+
     unsigned int hash = 5381;
     int c;
-    while((c = *nome++)){
+    while((c = *str++))
         hash = ((hash << 5) + hash) + c;
-        return hash % TAM_HASH;
-    }
+
+    return hash % TAM_HASH;
 }
 
 
@@ -24,8 +32,8 @@ void txt_to_hashMS(char *txt, char *arq){
 
 
 void TH_inicializa(){
-    FILE *f1 = fopen("hash_chaves.bin", "wb");
-    FILE *f2 = fopen("hash_dados.bin", "wb");
+    FILE *f1 = fopen(THash, "wb");
+    FILE *f2 = fopen(THDado, "wb");
 
     if(!f1 || !f2){
         printf("Não foi possível criar o arquivos da hash\n");
@@ -45,14 +53,14 @@ void TH_inicializa(){
 TH *TH_aloca(char *filme){
     TH *novo = (TH*) malloc(sizeof(TH));
     strcpy(novo->filme, filme);
-    novo->val = 1;
+    novo->valido = 1;
     novo->end = -1;
     return novo;
 }
 
 
 TH *TH_busca_filme(char *filme){
-    FILE *f = fopen("hash_chaves.bin", "rb");
+    FILE *f = fopen(THash, "rb");
     if(!f){
         printf("Não foi possivel abrir o arquivo hash_chaves.bin para busca\n");
         exit(1);
@@ -60,7 +68,7 @@ TH *TH_busca_filme(char *filme){
 
     TH h;
     while(fread(&h, sizeof(TH), 1, f)){
-        if(strcmp(h.filme, filme)){
+        if(strcasecmp(h.filme, filme) == 0){
             TH *temp = TH_aloca(filme);
             temp->end = h.end;
             fclose(f);
@@ -84,15 +92,15 @@ int TH_busca(char *chave, char *elem){
     TH h;
     TR r;
     while(fread(&h, sizeof(TH), 1, f1)){
-        if(strcmp(h.filme, chave) == 0){
+        if(strcasecmp(h.filme, chave) == 0){
             fseek(f2, h.end, SEEK_SET);
             int end = ftell(f2);
             int le = fread(&r, sizeof(TR), 1, f2);
             while(le){
-                if(strcmp(r.nome, elem) == 0){
+                if(strcasecmp(r.nome, elem) == 0){
                     fclose(f1);
                     fclose(f2);
-                    if(r.val == 1) return end;
+                    if(r.valido == 1) return end;
                 }
                 if(r.prox == -1){
                     break;
@@ -130,8 +138,8 @@ void TH_insere(char* filme, TR* elem){
         return;
     }
 
-    a = TR_busca_endereco_elem(filme, elem->nome);
-    if(a != -1) return;
+    int offset_elemento = TR_busca_endereco_elem(filme, elem->nome);
+    if(offset_elemento != -1) return;
     FILE* fdados = fopen(THDado, "rb+");
     if(!fdados) exit(1);
 
@@ -171,7 +179,7 @@ int TR_busca_filme(char* nome){
 
 TR* TR_busca_elem(char* filme, char* pessoa){
     int offset = TR_busca_filme(filme);
-    if(offset = -1) return NULL;
+    if(offset == -1) return NULL;
 
     FILE* fdados = fopen(THDado, "rb");
     if(!fdados) exit(1);
@@ -181,25 +189,28 @@ TR* TR_busca_elem(char* filme, char* pessoa){
     while(offset != -1){
         fseek(fdados, offset, SEEK_SET);
         fread(&aux, sizeof(TR), 1, fdados);
-        if(strcmp(aux.nome, pessoa) == 0){
-            if(aux.nome == 1){
+        if(strcasecmp(aux.nome, pessoa) == 0){
+            if(aux.valido == 1){
                 TR* resp = (TR*) malloc(sizeof(TR));
                 strcpy(resp->nome, aux.nome);
                 resp->tipo = aux.tipo;
                 strcpy(resp->papel, aux.papel);
                 resp->prox = aux.prox; 
+                fclose(fdados);
                 return resp;
             }
+            fclose(fdados);
             return NULL;
         }
         offset = aux.prox;
     }
+    fclose(fdados);
     return NULL;
 }
 
 int TR_busca_endereco_elem(char* filme, char* pessoa){
     int offset = TR_busca_filme(filme);
-    if(offset = -1) return -1;
+    if(offset == -1) return -1;
 
     FILE* fdados = fopen(THDado, "rb");
     if(!fdados) exit(1);
@@ -209,13 +220,70 @@ int TR_busca_endereco_elem(char* filme, char* pessoa){
     while(offset != -1){
         fseek(fdados, offset, SEEK_SET);
         fread(&aux, sizeof(TR), 1, fdados);
-        if(strcmp(aux.nome, pessoa) == 0){
-            if(aux.nome == 1){
+        if(strcasecmp(aux.nome, pessoa) == 0){
+            if(aux.valido == 1){
+                fclose(fdados);
                 return offset;
             }
-            return NULL;
+            fclose(fdados);
+            return -1;
         }
         offset = aux.prox;
     }
+    fclose(fdados);
     return -1;
+}
+
+int TR_busca_endereco_por_papel(char* filme, char* nome_pessoa, char* papel){
+    int offset = TR_busca_filme(filme);
+    if(offset == -1) return -1;
+
+    FILE* fdados = fopen(THDado, "rb");
+    if(!fdados) exit(1);
+
+    
+    TR aux;
+    while(offset != -1){
+        fseek(fdados, offset, SEEK_SET);
+        fread(&aux, sizeof(TR), 1, fdados);
+        if(strcasecmp(aux.nome, nome_pessoa) == 0){
+            if(strcasecmp(aux.papel, papel) == 0){
+                if(aux.valido == 1){
+                    fclose(fdados);
+                    return offset;
+                }
+                fclose(fdados);
+                return -1;
+            }
+        }
+        offset = aux.prox;
+    }
+    fclose(fdados);
+    return -1;
+}
+
+void TR_retira_relacao_por_nome(char* filme, char* nome_pessoa){
+    int offset_rel = TR_busca_endereco_elem(filme, nome_pessoa);
+    if(offset_rel == -1) return;
+    FILE* fdados = fopen(THDado, "rb+");
+    TR aux;
+    fseek(fdados, offset_rel, SEEK_SET);
+    fread(&aux, sizeof(TR), 1, fdados);
+    fseek(fdados, offset_rel, SEEK_SET);
+    aux.valido = 0;
+    fwrite(&aux, sizeof(TR), 1, fdados);
+    fclose(fdados);
+}
+
+void TR_retira_relacao_por_papel(char* filme, char* nome_pessoa, char* papel){
+    int offset_rel = TR_busca_endereco_por_papel(filme, nome_pessoa, papel);
+    if(offset_rel == -1) return;
+    FILE* fdados = fopen(THDado, "rb+");
+    TR aux;
+    fseek(fdados, offset_rel, SEEK_SET);
+    fread(&aux, sizeof(TR), 1, fdados);
+    fseek(fdados, offset_rel, SEEK_SET);
+    aux.valido = 0;
+    fwrite(&aux, sizeof(TR), 1, fdados);
+    fclose(fdados);
 }
