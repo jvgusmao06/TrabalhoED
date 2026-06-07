@@ -1,8 +1,10 @@
 #include <stdio.h>
+#include <unistd.h>
 
 #define TAM_HASH 200
-#define THDado "hash_dados.bin"
-#define THash "hash_chaves.bin"
+#define arqDado "hash_dados.bin"
+#define arqHash "hash_chaves.bin"
+#define arqPosLivre "hash_livres.bin"
 
 typedef enum{
     ACTED_IN,
@@ -36,11 +38,11 @@ int TR_busca_filme(char* filme); //retorna o endereco(offset) da primeira relaca
 TR* TR_busca_elem(char* filme, char* nome_pessoa); // retorna o relacionamento filme->pessoa
 int TR_busca_endereco_elem(char* filme, char* pessoa); // retorna endereco do primeiro relacionamento filme->pessoa
 int TR_busca_endereco_por_papel(char* filme, char* pessoa, char* papel); // retorna offset do relacionamento filme->pessoa->papel
+int TR_busca_anterior(FILE* fdados, char* filme, char* nome_pessoa);
+int TR_busca_anterior_por_papel(FILE* fdados, char* filme, char* nome_pessoa, char* papel);
 void TR_retira_relacao_por_nome(char* filme, char* nome_pessoa); // atualiza valor de validade da relacao para 0
 void TR_retira_relacao_por_papel(char* filme, char* nome_pessoa, char* papel);
-
-//Falta logica para inserir no primeiro espaco vazio disponivel.
-void TH_insere(char *filme, TR *dado); 
-
-//FALTA ESSA
+void TR_insere(char *filme, TR *dado); 
 void TR_retira_tudo(char* filme);
+void push_livre(int offset); // bota endereco do espaco vazio no arquivo de espacos livres
+int pop_livre(); // pega endereco no topo da pilha (arquivo) de enderecos vazios
