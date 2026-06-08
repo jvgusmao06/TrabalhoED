@@ -16,12 +16,9 @@ typedef enum{
     WROTE
 }TipoRelacao;
 
-// Duvida pro grupo: Vamos aderir tabela hash com esse no pra cada elemento ou
-// usamos abordagem de tamanho fixo e indexacao por inteiros (hash da string)?
 typedef struct hash{
-    int valido;
     char filme[100];
-    int end;
+    int offset;
 } TH;
 
 typedef struct relacionamento{
@@ -32,12 +29,10 @@ typedef struct relacionamento{
     int prox;
 } TR;
 
-int hashit(char* nome);
-void TH_inicializa();
-void trim(char* str);
-void txt_to_hashMS(char *txt);
-//int TH_busca_filme(char *filme); // retorna o endereço filme x em hash_chaves.bin
-int TH_busca_pessoa(char* pessoa); // retorna o endereço da pessoa x em hash_dados.bin
+int hashit(char* nome); // faz hash de str para integer
+void TH_inicializa(); // Cria os arquivos necessarios para armazenar os relacionamentos.
+void trim(char* str); // Retira espacos do inicio e final da string
+void txt_to_hashMS(char *txt);// Preenche tabela com arquivo texto de entrada padronizado.
 int TR_busca_filme(char* filme); //retorna o endereco(offset) da primeira relacao do filme em hash_dados.bin
 TR* TR_busca_elem(char* filme, char* nome_pessoa); // retorna o relacionamento filme->pessoa
 int TR_busca_endereco_elem(char* filme, char* pessoa); // retorna endereco do primeiro relacionamento filme->pessoa
@@ -53,3 +48,5 @@ int pop_livre(); // pega endereco no topo da pilha (arquivo) de enderecos vazios
 void TR_imprime_relacoes_filme_pessoa(char* filme, char* pessoa);
 void TR_imprime_relacoes_filme(char* filme);
 void TR_menu();
+void escreve_hash_vazio(int offset);
+void atualiza_root(int offset_hashNode, int offset_NewRoot);
