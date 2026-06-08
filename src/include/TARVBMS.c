@@ -126,7 +126,6 @@ void TARVBMS_inicializa(int t){ // Cria todos os arquivos vazios
     fclose(f);
 }
 
-
 long TARVBMS_raiz(FILE* arq){
     long raiz;
     TConfig temp;
@@ -142,6 +141,7 @@ long TARVBMS_raiz(FILE* arq){
 
 void TARVBMS_insere_um_do_arquivotxt(char *nome)
 {
+
     if(TARVBMS_busca(nome)){
         printf("Essa entidade ja esta na arvore!\n");
         return;
@@ -176,6 +176,11 @@ void TARVBMS_insere_um_do_arquivotxt(char *nome)
     
     }
 
+
+
+
+
+
 void TARVBMS_insere_um(TD *entidade, int t){
     if(!entidade){
         printf("Nao ha entidade! Funcao insere_um TARBMS");
@@ -183,8 +188,10 @@ void TARVBMS_insere_um(TD *entidade, int t){
     }
     FILE *f = fopen("../../dados/index.bin", "rb+");
     TConfig config;
+    fseek(f, 0, SEEK_SET);
     fread(&config, sizeof(TConfig), 1, f);
     int t = config.t;
+    int max_chaves = (2*t)-1;
     
     char chave[100];
     if(entidade->tipo == TIPO_FILME){
@@ -192,22 +199,49 @@ void TARVBMS_insere_um(TD *entidade, int t){
     } else if(entidade->tipo == TIPO_PESSOA){
         strcpy(chave, entidade->dados.pessoa.nome);
     }
+
+    
     if(config.raiz == -1){ // Avore esta vazia
-        TFOLHA *nova = TARVBMS_aloca_folha(t);
-        nova->dados.nchaves = 1;
-        //Eu gusmao 3 tava aqui.
+        // Cria a primeira folha em memória principal e insere a entidade
+        TFOLHA *nova_folha = TARVBMS_aloca_folha(t);
+        nova_folha->entidades[0] = *entidade;
+        nova_folha->dados.nchaves = 1;
+        
+        // Grava a folha no seu arquivo binário distinto (folha_0.bin) 
+        TARVBMS_cria_folha(*nova_folha, t, config.indice);
+        TARVBMSDADOS r_dados;
+        r_dados.nchaves = 0;
+        r_dados.filho_folha = 1;
+        r_dados.val = 1;
+        
+        fseek(f, 0, SEEK_END);
+        long pos_raiz = ftell(f);
+        fwrite(&r_dados, sizeof(TARVBMSDADOS), 1, f);
+        char nome_folha[30];
+        sprintf(nome_folha, "../../dados/folha_%d.bin", config.indice);
+        fwrite(nome_folha, sizeof(char) * 30, 1, f);
+        
+        config.raiz = pos_raiz;
+        config.indice++;
+        fseek(f, 0, SEEK_SET);
+        fwrite(&config, sizeof(TConfig), 1, f);
+        free(nova_folha->entidades);
+        free(nova_folha);
     } 
 }
 
-TARVBMS *TARVBMS_aloca_no_interno(int t){
+TARVBMS *TARVBMS_aloca_no_interno(int t, TARVBMSDADOS *dados){
     TARVBMS *novo = (TARVBMS*)malloc(sizeof(TARVBMS));
-    novo->ids = (char**)malloc()
-    // Gusmao estava dazendo isso aqui
-
+    int max_chaves = (t * 2) - 1;
+    novo->ids = (char**)malloc(sizeof(char[100]) * max_chaves);
+    novo->infos.nchaves = 0;
+    novo->infos.filho_folha = 1;
+    novo->infos.val = 1;
+    return novo;
 }
 
-void le_no_interno(FILE *f, long posicao, TARVBMSDADOS *infos, char (*ids)[100], long *filhos, char (*arq_folha)[30]) {
-    fseek(f, posicao, SEEK_SET);
+void le_no_interno(FILE *f, long *posicao, TARVBMSDADOS *infos, char (*ids)[100], long *filhos, char (*arq_folha)[30]) {
+    fseek(f, *posicao, SEEK_SET);
     
     fread(infos, sizeof(TARVBMSDADOS), 1, f);
     
@@ -219,9 +253,10 @@ void le_no_interno(FILE *f, long posicao, TARVBMSDADOS *infos, char (*ids)[100],
     else {
         fread(filhos, sizeof(long), infos->nchaves + 1, f);
     }
+    *posicao = ftell(f);
 }
 
-TFOLHA *TARVBMS_busca(char *nome, int t) {
+char *TARVBMS_busca_no_internos(char *nome, int t) {
     FILE *f = fopen("../../dados/index.bin", "rb");
     if (!f) {
         printf("Erro ao abrir o arquivo ../../dados/index.bin para busca\n");
@@ -241,10 +276,44 @@ TFOLHA *TARVBMS_busca(char *nome, int t) {
     TARVBMSDADOS no_infos;
     
     // Aloca matrizes/vetores auxiliares na RAM para ler o nó interno atual baseado no 't' max
+    
     int max_chaves = (t * 2) - 1;
     char ids[max_chaves][100];
-    long filhos[max_chaves + 1];
     char arq_folha[max_chaves + 1][30];
+    long filhos[max_chaves + 1];
 
-    // Gusmao estava fazendo isso aqui
+    while (1) {
+        ler_no_interno(f, pos_atual, &no_infos, ids, filhos, arq_folha);
+
+        int i = 0;
+        while (i < no_infos.nchaves && strcmp(nome, ids[i]) > 0) {
+            i++;
+        }
+
+
+        if (no_infos.val == 1) {
+            char nome_arquivo_folha[30];
+            strcpy(nome_arquivo_folha, arq_folha[i]);
+            
+            fclose(f);
+
+            char caminho_folha[60];
+            sprintf(caminho_folha, "../../dados/%s", nome_arquivo_folha);
+
+            FILE *ffolha = fopen(caminho_folha, "rb");
+            if (!ffolha) {
+                return NULL;
+            }
+
+            TFOLHA *folha = TARVBMS_aloca_folha(t);
+            fread(&(folha->dados), sizeof(TDADOSFOLHA), 1, ffolha);
+            fread(folha->entidades, sizeof(TD), folha->dados.nchaves, ffolha);
+            
+            fclose(ffolha);
+            return folha;
+        } 
+        else {
+            pos_atual = filhos[i];
+        }
+    }
 }

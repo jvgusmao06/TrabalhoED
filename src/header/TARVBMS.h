@@ -4,6 +4,9 @@
 #define PESSOA 1
 #define FILME 2
 
+#define FILHO 0
+#define FOLHA 1
+
 typedef struct{
     int t;
     long raiz;
@@ -30,6 +33,7 @@ typedef struct no{
 } TARVBMS;
 
 typedef struct{
+    int filho_folha;
     int val;
     int nchaves;
 } TARVBMSDADOS;
