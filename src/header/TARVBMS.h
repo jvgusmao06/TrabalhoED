@@ -14,14 +14,20 @@ typedef struct{
 } TConfig;
 
 typedef struct{
+    int nchaves; 
+    char prox[30];
+} TDADOSFOLHA;
+
+typedef struct{
     TDADOSFOLHA dados;
     TD *entidades;
 } TFOLHA;
 
 typedef struct{
-    int nchaves; 
-    char prox[30];
-} TDADOSFOLHA;
+    int filho_folha;
+    int val;
+    int nchaves;
+} TARVBMSDADOS;
 
 typedef struct no{
     TARVBMSDADOS infos;
@@ -32,19 +38,13 @@ typedef struct no{
     } dados;
 } TARVBMS;
 
-typedef struct{
-    int filho_folha;
-    int val;
-    int nchaves;
-} TARVBMSDADOS;
+void TARVBMS_inicializa(int t); // inicializa o arquivo de indices
+TFOLHA *TARVBMS_busca(char *nome);
 
-void TARVBMS_inicializa(); // inicializa o arquivo de indices
-TFOLHA TARVBMS_busca(char *nome, int t);
-
-void TARVBMS_insere_um(TD *entidade, int t);
+void TARVBMS_insere_um(TD *entidade);
 void TARVBMS_retira(TD *dado, int t);
-void TARVBMS_insere_um_do_arquivotxt(char *nome);
+void TARVBMS_insere_um_do_arquivotxt(char *nome, int t);
 long TARVBMS_raiz(FILE* arq_index);
-
+void TARVBMS_imprimefolha(TFOLHA *folha);
 void TARVBMS_imprime();
 void TARVBMS_imprime_chaves();
