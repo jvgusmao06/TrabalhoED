@@ -262,54 +262,66 @@ void TARVBMS_insere_um(TD *entidade)
     if (entidade->tipo == TIPO_FILME)
     {
         strcpy(chave, entidade->dados.filme.titulo);
-        printf("%s", entidade->dados.filme.titulo);
+        //printf("%s", entidade->dados.filme.titulo);
     }
     else if (entidade->tipo == TIPO_PESSOA)
     {
 
         strcpy(chave, entidade->dados.pessoa.nome);
-        printf("%s WE GO THIS \n", entidade->dados.pessoa.nome);
+        //printf("%s WE GO THIS \n", entidade->dados.pessoa.nome);
     }
 
-    if (config.raiz == -1)
+    if (config.indice == 0)
     { // Avore esta vazia
         // Cria a primeira folha em memória principal e insere a entidade
         TFOLHA *nova_folha = TARVBMS_aloca_folha(t);
         nova_folha->entidades[0] = *entidade;
         nova_folha->dados.nchaves = 1;
         strcpy(nova_folha->dados.prox, "-1");
-        printf("%s FAAAAH\n", nova_folha->entidades[0].dados.pessoa.nome);
+        //printf("%s FAAAAH\n", nova_folha->entidades[0].dados.pessoa.nome);
 
         // Grava a folha no seu arquivo binário distinto (folha_0.bin)
         TARVBMS_cria_folha(nova_folha, t, config.indice);
+        config.indice = 1; // Incrementa, pois agora temos a folha_0
 
-        TARVBMSDADOS r_dados;
-        r_dados.nchaves = 1;
-        r_dados.filho_folha = 1;
-        r_dados.val = 1;
-
-        fseek(f, 0, SEEK_END);
-        long pos_raiz = ftell(f);
-        fwrite(&r_dados, sizeof(TARVBMSDADOS), 1, f);
-
-        char nome_folha[30];
-        sprintf(nome_folha, "folha_%d.bin", config.indice);
-        fwrite(nome_folha, sizeof(char) * 30, 1, f);
-
-        config.raiz = pos_raiz;
-        config.indice++;
         fseek(f, 0, SEEK_SET);
         fwrite(&config, sizeof(TConfig), 1, f);
+        
         free(nova_folha->entidades);
         free(nova_folha);
         fclose(f);
+        return;
+    }
+        else if(config.raiz == -1 && config.indice>0){ // Caso em que a da p inserir na folha 0
+
+        char arq[30];
+        sprintf(arq, "../dados/folha_0.bin");
+        FILE *ffolha = fopen(arq, "rb");
+        
+        if (!ffolha) {
+            printf("Erro: folha_0.bin não encontrada!\n");
+            fclose(f);
+            return;
+        }
+
+        TDADOSFOLHA dados_folha;
+        fread(&dados_folha, sizeof(TDADOSFOLHA), 1, ffolha);
+        fclose(ffolha);
+
+        if (dados_folha.nchaves < max_chaves) 
+        {
+            // Tem espaço, só inserir direto na folha 0
+            TARVBMS_insere_folha(entidade, t, 0); 
+        }else{// A folha ta cheia precisamo do split
+
+
+        }
     }
     else
     {
         TARVBMSDADOS info_raiz;
         fseek(f, config.raiz, SEEK_SET);
         fread(&info_raiz, sizeof(TARVBMSDADOS), 1, f);
-        int max_chaves = (2 * t) - 1;
         if (info_raiz.nchaves == max_chaves)
         {
             printf("A raiz esta cheia. Iniciar logica de SPLIT de raiz!\n");
@@ -319,6 +331,7 @@ void TARVBMS_insere_um(TD *entidade)
             printf("Descendo na arvore\n");
             TARVBMS_insere_nao_completo(f, config.raiz, entidade, t);
         }
+        fclose(f);
     }
 }
 
