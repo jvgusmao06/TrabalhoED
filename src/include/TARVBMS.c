@@ -205,6 +205,7 @@ if(TARVBMS_busca(nome, t)){
                                 }
                                 */
 void TARVBMS_le_no_interno(FILE *f, long posicao, TARVBMSDADOS *infos, char (*ids)[100], long *filhos, char (*arq_folha)[30])
+
 {
     fseek(f, posicao, SEEK_SET);
 
@@ -222,6 +223,9 @@ void TARVBMS_le_no_interno(FILE *f, long posicao, TARVBMSDADOS *infos, char (*id
     }
 }
 
+//void TARVBMS_divisao_folha(); Vai ser implementado
+
+
 void TARVBMS_insere_nao_completo(FILE *f, long pos_no, TD *entidade, int t)
 {
     int max_chaves = (2 * t) - 1;
@@ -230,16 +234,68 @@ void TARVBMS_insere_nao_completo(FILE *f, long pos_no, TD *entidade, int t)
     long filhos[max_chaves + 1];
     char arq_folha[max_chaves + 1][30];
 
-    TARVBMS_le_no_interno(f, pos_no, &infos, ids, filhos, arq_folha);
+    TARVBMS_le_no_interno(f, pos_no, &infos, ids, filhos, arq_folha); // Le o no interno e poe no info
+    char chave[100]; // Pega a chave da entidade a gnt qr inserir
+    if (entidade->tipo == TIPO_PESSOA) {
+        strcpy(chave, entidade->dados.pessoa.nome);
+    } else {
+        strcpy(chave, entidade->dados.filme.titulo);
+    }
+
+
     int i = infos.nchaves - 1;
-    if (infos.filho_folha == 1)
+    while (i >= 0 && strcmp(chave, ids[i]) < 0) i--; // Logica rossetiana para achar o indice correto onde ele deve ser inserido
+    i++;  // i fica com a pos exata do filho
+
+    if (infos.filho_folha == 1) // Caso A: Os filho e folha
     {
-        printf("INserindo folha!");
-        TARVBMS_insere_folha(entidade, t, i);
-        return;
+        int indice_folha;
+        sscanf(arq_folha[i], "folha_%d.bin", &indice_folha); // Extrai o indice da folha
+
+
+        char arq_filho[30]; // Abrindo a folha p ver se ta cheia
+        sprintf(arq_filho, "../dados/folha_%d.bin", indice_folha);
+        FILE *ffolha = fopen(arq_filho, "rb");
+        if (!ffolha) {
+            printf("Erro ao abrir %s. Funcao insere nao completo, if_filho folha == 1 \n", arq_filho);
+            exit(1);
+        }
+        TDADOSFOLHA dados_folha;
+        fread(&dados_folha, sizeof(TDADOSFOLHA), 1, ffolha);
+        fclose(ffolha);
+
+        if(dados_folha.nchaves >= max_chaves){ // Folha esta cheia, precisa do split
+            printf("A folha %d esta cheia. Comecando divisao\n", indice_folha);
+            //TARVBMS_divisao_folha(f, pos_no, i, indice_folha, t);
+            // Como a folha foi dividida, uma nova chave fantasia subiu para o nó atual
+            // O nó atual mudou! Precisamos reler os seus dados para atualizar o nosso vetor de chaves em memória.
+            TARVBMS_le_no_interno(f, pos_no, &infos, ids, filhos, arq_folha);
+
+
+
+            if (strcmp(chave, ids[i]) > 0) // Verificacao p ver se a chave que queremos inserir e maior que a chave que acabou de subir
+            {
+                i++;
+                // Atualizamos o indice_folha para o número da nova folha
+                sscanf(arq_folha[i], "folha_%d.bin", &indice_folha);
+            }
+        }
+
+        
+        printf("Inserindo chave '%s' na folha %d!\n", chave, indice_folha);
+        TARVBMS_insere_folha(entidade, t, indice_folha);
+    }else{
+        // CASO B: OS FILHOS SÃO NÓS INTERNOS
+        long pos_filho = filhos[i];
+        // Falta a logica aq
+        printf("Descendo para o nó interno na posicao %ld\n", pos_filho);
+        TARVBMS_insere_nao_completo(f, pos_filho, entidade, t);
     }
 }
 void TARVBMS_insere_um(TD *entidade)
+
+
+
 {
     if (!entidade)
     {
