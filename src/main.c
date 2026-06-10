@@ -48,16 +48,15 @@ int main() {
         fclose(f_index);
     }
     
-    /*
     TFOLHA * folha = TARVBMS_busca("Keanu Reeves");
     if(folha){
-    free(folha->entidades);
-    free(folha);
+        TARVBMS_imprime_folha(folha);
+        free(folha->entidades);
+        free(folha);
     }
     else{
-        printf("Não achou\n");
+        printf("\nNão achou\n");
     }
-        */
    
     // Lendo a folha_0.bin para ver se o dado foi gravado
     FILE *f_folha = fopen("../dados/folha_0.bin", "rb");
