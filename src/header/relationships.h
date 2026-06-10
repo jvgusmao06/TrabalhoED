@@ -4,9 +4,11 @@
 #include <ctype.h>
 #include <string.h>
 
-#define TAM_HASH 200
+#define TAM_HASH 400
+
 #define arqDado "hash_dados.bin"
-#define arqHash "hash_chaves.bin"
+#define arqHashFilme "hash_filme_chaves.bin"
+#define arqHashPessoa "hash_pessoa_chaves.bin"
 #define arqPosLivre "hash_livres.bin"
 
 typedef enum{
@@ -16,37 +18,63 @@ typedef enum{
     WROTE
 }TipoRelacao;
 
-typedef struct hash{
+typedef struct hashp{
+    char nome_pessoa[50];
+    int offset;
+} THP;
+
+typedef struct hashf{
     char filme[100];
     int offset;
-} TH;
+} THF;
 
-typedef struct relacionamento{
+typedef struct relacionamentof{
     int valido;
-    char nome[50];
+    char nome_filme[100];
+    char nome_pessoa[50];
     TipoRelacao tipo; //0->ACTED_IN, 1->DIRECTED, 2->PRODUCED, 3->WROTE
     char papel[50];
-    int prox;
+    int THFprox;
+    int THPprox;
 } TR;
 
-int hashit(char* nome); // faz hash de str para integer
-void TH_inicializa(); // Cria os arquivos necessarios para armazenar os relacionamentos.
-void trim(char* str); // Retira espacos do inicio e final da string
-void txt_to_hashMS(char *txt);// Preenche tabela com arquivo texto de entrada padronizado.
-int TR_busca_filme(char* filme); //retorna o endereco(offset) da primeira relacao do filme em hash_dados.bin
-TR* TR_busca_elem(char* filme, char* nome_pessoa); // retorna o relacionamento filme->pessoa
-int TR_busca_endereco_elem(char* filme, char* pessoa); // retorna endereco do primeiro relacionamento filme->pessoa
-int TR_busca_endereco_por_papel(char* filme, char* pessoa, char* papel); // retorna offset do relacionamento filme->pessoa->papel
-int TR_busca_anterior(FILE* fdados, char* filme, char* nome_pessoa);
-int TR_busca_anterior_por_papel(FILE* fdados, char* filme, char* nome_pessoa, char* papel);
-void TR_retira_relacao_por_nome(char* filme, char* nome_pessoa); // atualiza valor de validade da relacao para 0
-void TR_retira_relacao_por_papel(char* filme, char* nome_pessoa, char* papel);
-void TR_insere(char *filme, TR *dado); 
-void TR_retira_tudo(char* filme);
-void push_livre(int offset); // bota endereco do espaco vazio no arquivo de espacos livres
-int pop_livre(); // pega endereco no topo da pilha (arquivo) de enderecos vazios
-void TR_imprime_relacoes_filme_pessoa(char* filme, char* pessoa);
+
+// Hash e utilitários FOI!!!
+int hashit(char* nome);
+void trim(char* str);
+void push_livre(int offset);
+int pop_livre();
+
+// Inicialização e preenchimento FOI!!!!
+void TH_inicializa();
+void preenche_hashes(char* txt);
+
+// Utilitários de hash FOI!!!!
+void escreve_hash_filme_vazio(int offset);
+void escreve_hash_pessoa_vazio(int offset);
+void atualiza_root_filme(int offset_hashNode, int offset_NewRoot);
+void atualiza_root_pessoa(int offset_hashNode, int offset_NewRoot);
+
+// Busca FOI!!!!!
+int TR_busca_filme(char* filme);
+int TR_busca_pessoa(char* pessoa);
+int TR_busca_endereco(char* filme, char* pessoa, TipoRelacao tipo, char* papel);
+int TR_busca_filme_anterior(FILE* fdados, char* filme, char* pessoa, TipoRelacao tipo, char* papel);
+int TR_busca_pessoa_anterior(FILE* fdados, char* pessoa, char* filme, TipoRelacao tipo, char* papel);
+int TR_busca_endereco_por_pessoa(char* filme, char* pessoa, TipoRelacao tipo, char* papel);
+
+// Inserção FOI!!!!!
+void THF_insere(TR* elem);
+void THP_insere(TR* elem);
+
+// Retirada FOI!!!
+void TR_retira_relacao(char* filme, char* pessoa, TipoRelacao tipo, char* papel);
+void TR_retira_relacionamento(FILE* arq, char* filme, char* pessoa, TipoRelacao tipo, char* papel);
+void TR_retira_filme(char* filme);
+void TR_retira_pessoa(char* pessoa);
+
+// Impressão FOI!!!
 void TR_imprime_relacoes_filme(char* filme);
+void TR_imprime_relacoes_pessoa(char* pessoa);
+void TR_imprime_relacoes_filme_pessoa(char* filme, char* pessoa); 
 void TR_menu();
-void escreve_hash_vazio(int offset);
-void atualiza_root(int offset_hashNode, int offset_NewRoot);
