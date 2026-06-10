@@ -4,7 +4,7 @@
 #include <ctype.h>
 #include <string.h>
 
-#define TAM_HASH 200
+#define TAM_HASH 400
 
 #define arqDado "hash_dados.bin"
 #define arqHashFilme "hash_filme_chaves.bin"
@@ -39,46 +39,42 @@ typedef struct relacionamentof{
 } TR;
 
 
-
-
-// Hash e utilitários
+// Hash e utilitários FOI!!!
 int hashit(char* nome);
 void trim(char* str);
 void push_livre(int offset);
 int pop_livre();
 
-// Inicialização e preenchimento
+// Inicialização e preenchimento FOI!!!!
 void TH_inicializa();
 void preenche_hashes(char* txt);
 
-
-// Utilitários de hash
+// Utilitários de hash FOI!!!!
 void escreve_hash_filme_vazio(int offset);
 void escreve_hash_pessoa_vazio(int offset);
 void atualiza_root_filme(int offset_hashNode, int offset_NewRoot);
 void atualiza_root_pessoa(int offset_hashNode, int offset_NewRoot);
 
-
-// Busca 
+// Busca FOI!!!!!
 int TR_busca_filme(char* filme);
 int TR_busca_pessoa(char* pessoa);
 int TR_busca_endereco(char* filme, char* pessoa, TipoRelacao tipo, char* papel);
 int TR_busca_filme_anterior(FILE* fdados, char* filme, char* pessoa, TipoRelacao tipo, char* papel);
 int TR_busca_pessoa_anterior(FILE* fdados, char* pessoa, char* filme, TipoRelacao tipo, char* papel);
-int TR_busca_endereco_por_pessoa(char* filme, char* pessoa, TipoRelacao tipo, char* papel); //FALTA ESSA
+int TR_busca_endereco_por_pessoa(char* filme, char* pessoa, TipoRelacao tipo, char* papel);
 
-// Inserção FOI!
+// Inserção FOI!!!!!
 void THF_insere(TR* elem);
 void THP_insere(TR* elem);
 
-// Retirada
+// Retirada FOI!!!
 void TR_retira_relacao(char* filme, char* pessoa, TipoRelacao tipo, char* papel);
 void TR_retira_relacionamento(FILE* arq, char* filme, char* pessoa, TipoRelacao tipo, char* papel);
 void TR_retira_filme(char* filme);
 void TR_retira_pessoa(char* pessoa);
 
-// Impressão
+// Impressão FOI!!!
 void TR_imprime_relacoes_filme(char* filme);
 void TR_imprime_relacoes_pessoa(char* pessoa);
 void TR_imprime_relacoes_filme_pessoa(char* filme, char* pessoa); 
-void TR_menu(); //FALTA ATUALIZAR!!
+void TR_menu();
