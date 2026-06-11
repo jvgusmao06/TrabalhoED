@@ -1,3 +1,6 @@
+#ifndef RELATIONSHIP_H
+#define RELATIONSHIP_H
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -53,3 +56,5 @@ int pop_livre(); // pega endereco no topo da pilha (arquivo) de enderecos vazios
 void TR_imprime_relacoes_filme_pessoa(char* filme, char* pessoa);
 void TR_imprime_relacoes_filme(char* filme);
 void TR_menu();
+
+#endif

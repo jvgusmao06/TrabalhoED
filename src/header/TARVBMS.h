@@ -1,4 +1,6 @@
-#include <stdio.h>
+#ifndef TARVBMS_H
+#define TARVBMS_H
+
 #include "TFOLHA.h"
 #include "TD.h"
 
@@ -33,15 +35,14 @@ typedef struct no{
 } TARVBMS;
 
 void TARVBMS_inicializa(int t); // inicializa o arquivo de indices
-TFOLHA *TARVBMS_carrega_folha(char *nome);
-
 void TARVBMS_insere_um(TD *entidade);
 void TARVBMS_insere_um_do_arquivotxt(char *nome, int t);
 long TARVBMS_raiz(FILE* arq_index);
-void TARVBMS_imprime_folha(TFOLHA *folha);
 void TARVBMS_imprime();
 void TARVBMS_imprime_folhas();
 void TARVBMS_divisao_folha(FILE *f,long pos_no, int ind_folha, int i);
 void TARVBMS_retira(char *chave);
 int TARVBMS_remove_da_folha(int indice_folha, char *chave, int t);
 void TARVBMS_removezada(FILE *f, long pos_no, char*chave, int t);
+
+#endif
