@@ -14,12 +14,6 @@
 #define FOLHA 1
 
 typedef struct{
-    int t;
-    long raiz;
-    int indice;
-} TConfig;
-
-typedef struct{
     int filho_folha;
     int val;
     int nchaves;
@@ -34,15 +28,21 @@ typedef struct no{
     } dados;
 } TARVBMS;
 
-void TARVBMS_inicializa(int t); // inicializa o arquivo de indices
-void TARVBMS_insere_um(TD *entidade);
-void TARVBMS_insere_um_do_arquivotxt(char *nome, int t);
 long TARVBMS_raiz(FILE* arq_index);
-void TARVBMS_imprime();
-void TARVBMS_imprime_folhas();
+
+void TARVBMS_inicializa(int t); // inicializa o arquivo de indices
+
+void TARVBMS_insere_um(TD *entidade);
+void TARVBMS_preenche_arvore(char* txt);
+//void TARVBMS_insere_um_do_arquivotxt(char *nome, int t);
+
 void TARVBMS_divisao_folha(FILE *f,long pos_no, int ind_folha, int i);
 void TARVBMS_retira(char *chave);
 int TARVBMS_remove_da_folha(int indice_folha, char *chave, int t);
 void TARVBMS_removezada(FILE *f, long pos_no, char*chave, int t);
+
+// Impressão
+void TARVBMS_imprime();
+void TARVBMS_imprime_folhas();
 
 #endif

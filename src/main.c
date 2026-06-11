@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "header/TARVBMS.h"
+#include "header/util.h"
 
 int main() {
     int t = 2;
@@ -48,9 +49,9 @@ int main() {
         fclose(f_index);
     }
     
-    TFOLHA * folha = TARVBMS_busca("Keanu Reeves");
+    TFOLHA * folha = TFOLHA_carrega("Keanu Reeves");
     if(folha){
-        TARVBMS_imprime_folha(folha);
+        TFOLHA_imprime(folha);
         free(folha->entidades);
         free(folha);
     }

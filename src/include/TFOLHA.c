@@ -1,4 +1,8 @@
+#include <stdlib.h>
+#include <string.h>
+#include "../header/util.h"
 #include "../header/TD.h"
+#include "../header/TFOLHA.h"
 #include "../header/TARVBMS.h"
 
 TFOLHA *TFOLHA_aloca(int t)
@@ -6,7 +10,7 @@ TFOLHA *TFOLHA_aloca(int t)
     TFOLHA *novo = (TFOLHA *)malloc(sizeof(TFOLHA));
     int tam = (t * 2) - 1;
     novo->entidades = (TD *)malloc(sizeof(TD) * tam);
-    novo->dados.nchaves = 0;
+    novo->dados.nchaves = 1;
     return novo;
 }
 
@@ -18,11 +22,11 @@ TFOLHA *TFOLHA_le(int indice_folha, int t)
     FILE *f = fopen(arq, "rb");
     if (!f)
     {
-        printf("Erro ao abrir folha_%d.bin. Funcao TARVBMS_le_folha\n", indice_folha);
+        printf("Erro ao abrir folha_%d.bin. Funcao TFolha_le\n", indice_folha);
         return NULL;
     }
 
-    TFOLHA *folha = TARVBMS_aloca_folha(t);
+    TFOLHA *folha = TFOLHA_aloca(t);
     fread(&folha->dados, sizeof(TDADOSFOLHA), 1, f);
     fread(folha->entidades, sizeof(TD), folha->dados.nchaves, f);
 
@@ -86,7 +90,7 @@ TFOLHA *TFOLHA_carrega(char *nome)
     {
         fclose(f);
         FILE *f = fopen("../dados/folha_0.bin", "rb");
-        TFOLHA *folha = TARVBMS_aloca_folha(c.t);
+        TFOLHA *folha = TFOLHA_aloca(c.t);
         fread(&folha->dados, sizeof(TDADOSFOLHA), 1, f);
         fread(folha->entidades, sizeof(TD), folha->dados.nchaves, f);
 
@@ -123,7 +127,7 @@ TFOLHA *TFOLHA_carrega(char *nome)
     long filhos[max_chaves + 1];
     while (1)
     {
-        TARVBMS_le_no_interno(f, pos_atual, &no_infos, ids, filhos, arq_folha);
+        le_no_interno(f, pos_atual, &no_infos, ids, filhos, arq_folha);
 
         if (no_infos.nchaves <= 0 || no_infos.nchaves > max_chaves)
         {
@@ -149,7 +153,7 @@ TFOLHA *TFOLHA_carrega(char *nome)
             if (!ffolha)
                 return NULL;
 
-            TFOLHA *folha = TARVBMS_aloca_folha(c.t);
+            TFOLHA *folha = TFOLHA_aloca(c.t);
             fread(&folha->dados, sizeof(TDADOSFOLHA), 1, ffolha);
             fread(folha->entidades, sizeof(TD), folha->dados.nchaves, ffolha);
 
@@ -163,7 +167,7 @@ TFOLHA *TFOLHA_carrega(char *nome)
     }
 }
 
-void TFOLHA_insere(TD *entidade, int t, int index)
+void TFOLHA_insere_na_folha(TD *entidade, int t, int index)
 { // Insere ordenado um TD na folha caso não esteja cheia
     char arq[30];
     sprintf(arq, "../dados/folha_%d.bin", index);
@@ -176,19 +180,18 @@ void TFOLHA_insere(TD *entidade, int t, int index)
     {
         printf("A folha ../dados/folha_%d.bin não existe. Criando uma folha.\n", index);
 
-        folha = TARVBMS_aloca_folha(t);
+        folha = TFOLHA_aloca(t);
         
-        folha->dados.nchaves += 1;
         folha->entidades[0] = *entidade;
 
-        TARVBMS_cria_folha(folha, t, index);
+        TFOLHA_cria(folha, t, index);
 
         free(folha->entidades);
         free(folha);
         return;
     }
 
-    folha = TARVBMS_aloca_folha(t);
+    folha = TFOLHA_aloca(t);
     fread(&(folha->dados), sizeof(TDADOSFOLHA), 1, f);
 
     fread(folha->entidades, sizeof(TD), folha->dados.nchaves, f);
@@ -204,7 +207,7 @@ void TFOLHA_insere(TD *entidade, int t, int index)
     }
 
     int i = folha->dados.nchaves - 1;
-    while (i >= 0 && comparar_por_nome(&folha->entidades[i], entidade) > 0)
+    while (i >= 0 && compara_entidades_por_nome(&folha->entidades[i], entidade) > 0)
     {
         folha->entidades[i + 1] = folha->entidades[i];
         i--;
@@ -213,7 +216,7 @@ void TFOLHA_insere(TD *entidade, int t, int index)
     folha->entidades[i + 1] = *entidade;
     folha->dados.nchaves++;
 
-    TARVBMS_cria_folha(folha, t, index);
+    TFOLHA_cria(folha, t, index);
     free(folha->entidades);
     free(folha);
 }

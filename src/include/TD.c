@@ -4,7 +4,6 @@
 
 TD *TD_aloca(){
     TD *novo = (TD*) malloc(sizeof(TD));
-    novo->dados.pessoa.nome;
 }
 
 int ler_entidade(FILE *f, TD *e) {
