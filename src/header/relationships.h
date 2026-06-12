@@ -1,3 +1,6 @@
+#ifndef RELATIONSHIP_H
+#define RELATIONSHIP_H
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -75,6 +78,5 @@ void TR_retira_pessoa(char* pessoa);
 
 // Impressão FOI!!!
 void TR_imprime_relacoes_filme(char* filme);
-void TR_imprime_relacoes_pessoa(char* pessoa);
-void TR_imprime_relacoes_filme_pessoa(char* filme, char* pessoa); 
 void TR_menu();
+#endif

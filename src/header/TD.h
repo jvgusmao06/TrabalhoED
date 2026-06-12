@@ -1,3 +1,6 @@
+#ifndef TD_H
+#define TD_H
+
 #include <stdio.h>
 
 typedef enum {
@@ -27,3 +30,5 @@ typedef struct {
 
 
 int ler_entidade(FILE *f, TD *e);
+
+#endif
