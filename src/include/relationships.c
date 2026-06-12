@@ -1,8 +1,8 @@
 #include "../header/relationships.h"
-#include <string.h>
 
 
 int hashit(char* nome){
+    trim(nome);
     char copia[100];
     strncpy(copia, nome, sizeof(copia) - 1);
     copia[99] = '\0';
@@ -23,6 +23,7 @@ void push_livre(int offset){
     FILE* f = fopen(arqPosLivre, "ab");
     if(!f) exit(1);
     fwrite(&offset, sizeof(int), 1, f);
+    printf("DEBUG: offset livre %d\n", offset);
     fclose(f);
 }
 
@@ -31,17 +32,22 @@ int pop_livre(){
     if(!flivres) return -1; 
     
     fseek(flivres, 0, SEEK_END);
-    if(ftell(flivres) < sizeof(int)){ 
+    long tamanho = ftell(flivres);
+    if(tamanho < sizeof(int)){ 
         fclose(flivres);
         return -1;
     }
+
     int offset;
-    
     fseek(flivres, -sizeof(int), SEEK_END);
     fread(&offset, sizeof(int), 1, flivres);
-    int pos = ftell(flivres);
+    
+    fseek(flivres, tamanho - sizeof(int), SEEK_SET);
     fclose(flivres);
-    truncate(arqPosLivre, pos); 
+    
+    flivres = fopen(arqPosLivre, "ab");
+    fclose(flivres);
+    truncate(arqPosLivre, tamanho - sizeof(int));
 
     return offset;
 }
@@ -64,11 +70,11 @@ void trim(char* str){
         str[fim--] = '\0';
 }
 
-void txt_to_hashMS(char *txt){
+void preenche_hashes(char *txt){
     FILE* fteste = fopen(arqDado, "rb");
     fseek(fteste, 0, SEEK_END);
     if(ftell(fteste) > sizeof(TR)) return; //Arquivo ja preenchido com Relationships.txt
-    
+    fclose(fteste);
     FILE *finput = fopen(txt, "r");
     if(!finput) exit(1);
     
@@ -118,44 +124,51 @@ void txt_to_hashMS(char *txt){
             while(papel != NULL){
                 if(!papel) continue;
                 trim(papel);
+                
                 TR elem;
                 elem.valido = 1;
-                strcpy(elem.nome, nome);
+                strcpy(elem.nome_pessoa, nome);
                 strcpy(elem.papel, papel);
+                strcpy(elem.nome_filme, filme);
                 elem.tipo = tipo;
-                elem.prox = -1;
+                elem.THFprox = -1;
+                elem.THPprox = -1;
 
-                TR_insere(filme, &elem);
+
+                THF_insere(&elem);
+                THP_insere(&elem);
                 papel = strtok(NULL, ",");
             }
         }
         else{
             TR elem;
             elem.valido = 1;
-            elem.prox = -1;
+            elem.THFprox = -1;
+            elem.THPprox = -1;
             elem.tipo = tipo;
             elem.papel[0] = '\0';
-            strcpy(elem.nome, nome);
-
+            strcpy(elem.nome_pessoa, nome);
+            strcpy(elem.nome_filme, filme);
             
-            TR_insere(filme, &elem);
+            THF_insere(&elem);
+            THP_insere(&elem);
         }
     }
     fclose(finput);
 }
 
 void TH_inicializa(){
-    FILE* teste = fopen(arqHash, "rb");
+    FILE* teste = fopen(arqHashFilme, "rb");
     if(teste){
         fclose(teste);
         return;
     }
-    
-    FILE* fhash = fopen(arqHash, "wb");
+    FILE* fhashp = fopen(arqHashPessoa, "wb");
+    FILE* fhashf = fopen(arqHashFilme, "wb");
     FILE* fdados = fopen(arqDado, "wb");
     FILE* flivres = fopen(arqPosLivre, "wb");
 
-    if((!fhash || !fdados)|| !flivres){
+    if((!fhashf || !fdados)|| !flivres){
         printf("Não foi possível criar os arquivos da hash\n");
         exit(1);
     }
@@ -164,102 +177,88 @@ void TH_inicializa(){
 
     int i;
     int vazio = -1;
+    char nome_vazio[] = "\0";
+    THF hashNode;
+    THP hashNodep;
+    strcpy(hashNode.filme, nome_vazio);
+    hashNode.offset = vazio;
+    strcpy(hashNodep.nome_pessoa, nome_vazio);
+    hashNodep.offset = vazio;
     for(i=0; i<TAM_HASH; i++){
-        fwrite(&vazio, sizeof(int), 1, fhash); //preenche arquivo criado com -1
+        fwrite(&hashNode, sizeof(THF), 1, fhashf); //preenche arquivo criado com -1 e filme vazio
+        fwrite(&hashNodep, sizeof(THP), 1, fhashp);
     }
-    fclose(fhash);
+    fclose(fhashf);
+    fclose(fhashp);
 }
 
-TH *TH_aloca(char *filme){
-    TH *novo = (TH*) malloc(sizeof(TH));
-    strcpy(novo->filme, filme);
-    novo->valido = 1;
-    novo->end = -1;
-    return novo;
+void THP_insere(TR* elem){
+
+    int a = TR_busca_endereco_por_pessoa(elem->nome_filme, elem->nome_pessoa, elem->tipo, elem->papel);
+    if(a != -1) return;
+    
+    int offset_elem = TR_busca_endereco(elem->nome_filme, elem->nome_pessoa, elem->tipo, elem->papel);
+    if(offset_elem == -1) return;
+
+    int offset_hash = TR_busca_pessoa(elem->nome_pessoa);
+    if(offset_hash == -1){
+        offset_hash = hashit(elem->nome_pessoa) * sizeof(THP);
+        FILE* fhash = fopen(arqHashPessoa, "rb+");
+        fseek(fhash, offset_hash, SEEK_SET);
+        THP aux;
+        strcpy(aux.nome_pessoa, elem->nome_pessoa);
+        aux.offset = offset_elem;
+        fwrite(&aux, sizeof(THP), 1, fhash);
+        fclose(fhash);
+        return;
+    }
+    
+    FILE* fdados = fopen(arqDado, "rb+");
+    TR aux;
+    int offset_ant = -1;
+    while(offset_hash != -1){
+        fseek(fdados, offset_hash, SEEK_SET);
+        fread(&aux, sizeof(TR), 1, fdados);
+        offset_ant = offset_hash;
+        offset_hash = aux.THPprox;
+    }
+    aux.THPprox = offset_elem;
+    fseek(fdados, offset_ant, SEEK_SET);
+    fwrite(&aux, sizeof(TR), 1, fdados);
+    fclose(fdados);
+    return;
+    
 }
 
-TH *TH_busca_filme(char *filme){
-    FILE *f = fopen(arqHash, "rb");
-    if(!f){
-        printf("Não foi possivel abrir o arquivo hash_chaves.bin para busca\n");
-        exit(1);
-    }
-
-    TH h;
-    while(fread(&h, sizeof(TH), 1, f)){
-        if(strcasecmp(h.filme, filme) == 0){
-            TH *temp = TH_aloca(filme);
-            temp->end = h.end;
-            fclose(f);
-            return temp;
-        }
-    }
-    fclose(f);
-    return NULL;
-}
-
-int TH_busca(char *chave, char *elem){
-    FILE *f1 = fopen(arqHash, "rb");
-    FILE *f2 = fopen(arqDado, "rb");
-
-    if(!f1 || !f2){
-        printf("Não foi possível abrir os arquivos da hash para busca\n");
-        exit(1);
-    }
-
-    TH h;
-    TR r;
-    while(fread(&h, sizeof(TH), 1, f1)){
-        if(strcasecmp(h.filme, chave) == 0){
-            fseek(f2, h.end, SEEK_SET);
-            int end = ftell(f2);
-            int le = fread(&r, sizeof(TR), 1, f2);
-            while(le){
-                if(strcasecmp(r.nome, elem) == 0){
-                    fclose(f1);
-                    fclose(f2);
-                    if(r.valido == 1) return end;
-                }
-                if(r.prox == -1){
-                    break;
-                }
-                fseek(f2, r.prox, SEEK_SET);
-                end = ftell(f2);
-                le = fread(&r, sizeof(TR), 1, f2);
-            }
-            fclose(f1);
-            fclose(f2);
-            return -1;
-        }
-    }
-    fclose(f1);
-    fclose(f2);
-    return -1;
-}
-
-void TR_insere(char* filme, TR* elem){
-    int a = TR_busca_filme(filme);
+void THF_insere(TR* elem){
+    int a = TR_busca_filme(elem->nome_filme);
     if(a == -1){                        //Filme nao existe na tabela
-        FILE* fhash = fopen(arqHash, "rb+");
+        FILE* fhash = fopen(arqHashFilme, "rb+");
         FILE* fdados = fopen(arqDado, "rb+");
         if(!fhash || !fdados) exit(1);
-        int offset_arqHash = hashit(filme) * sizeof(int);
+        int offset_arqHashFilme = hashit(elem->nome_filme) * sizeof(THF);
 
         int novo_offset = pop_livre();
         if(novo_offset == -1){
             fseek(fdados, 0, SEEK_END);
             novo_offset = ftell(fdados);
         }
+        THF hashNode;
+        strcpy(hashNode.filme, elem->nome_filme);
+        hashNode.offset = novo_offset;
         fseek(fdados, novo_offset, SEEK_SET);
+        elem->THFprox = -1;
+        elem->THPprox = -1;
+        elem->valido = 1;
         fwrite(elem, sizeof(TR), 1, fdados);
-        fseek(fhash, offset_arqHash, SEEK_SET);
-        fwrite(&novo_offset, sizeof(int), 1, fhash);
+        fseek(fhash, offset_arqHashFilme, SEEK_SET);
+        fwrite(&hashNode, sizeof(THF), 1, fhash);
         fclose(fhash);
         fclose(fdados);
         return;
     }
 
-    int offset_elemento = TR_busca_endereco_por_papel(filme, elem->nome, elem->papel);
+    int offset_elemento = TR_busca_endereco(elem->nome_filme, elem->nome_pessoa, elem->tipo, elem->papel);
     if(offset_elemento != -1) return;
     FILE* fdados = fopen(arqDado, "rb+");
     if(!fdados) exit(1);
@@ -267,8 +266,9 @@ void TR_insere(char* filme, TR* elem){
     TR atual;
     fseek(fdados, a, SEEK_SET);
     fread(&atual, sizeof(TR), 1, fdados);
-    while(atual.prox != -1){
-        a = atual.prox;
+
+    while(atual.THFprox != -1){
+        a = atual.THFprox;
         fseek(fdados, a, SEEK_SET);
         fread(&atual, sizeof(TR), 1, fdados);
     }
@@ -278,8 +278,11 @@ void TR_insere(char* filme, TR* elem){
         fseek(fdados, 0, SEEK_END);
         novo_offset = ftell(fdados);
     }
-    atual.prox = novo_offset;
+    atual.THFprox = novo_offset;
     fseek(fdados, novo_offset, SEEK_SET);
+    elem->valido = 1;
+    elem->THFprox = -1;
+    elem->THPprox = -1;
     fwrite(elem, sizeof(TR), 1, fdados);
     fseek(fdados, a, SEEK_SET);
     fwrite(&atual, sizeof(TR), 1, fdados);
@@ -287,65 +290,53 @@ void TR_insere(char* filme, TR* elem){
 }
 
 int TR_busca_filme(char* filme){
-    int offset_arqHash = hashit(filme) * sizeof(int);
-    FILE* fhash = fopen(arqHash, "rb");
+    int offset_arqHashFilme = hashit(filme) * sizeof(THF);
+    FILE* fhash = fopen(arqHashFilme, "rb");
     if(!fhash) exit(1);
     
     int offset_dado;
-    fseek(fhash, offset_arqHash, SEEK_SET);
-    fread(&offset_dado, sizeof(int), 1, fhash);
+    THF hashNode;
+    fseek(fhash, offset_arqHashFilme, SEEK_SET);
+    fread(&hashNode, sizeof(THF), 1, fhash);
     fclose(fhash);
-    if(offset_dado == -1){
-        printf("Filme não encontrado!\n");
+    offset_dado = hashNode.offset;
+    if((offset_dado == -1) || (strcasecmp(hashNode.filme, filme) != 0)){
         return -1;
     }
     return offset_dado;
 }
 
-TR* TR_busca_elem(char* filme, char* pessoa){
-    int offset = TR_busca_filme(filme);
-    if(offset == -1) return NULL;
-
-    FILE* fdados = fopen(arqDado, "rb");
-    if(!fdados) exit(1);
-
+int TR_busca_pessoa(char* pessoa){
+    int offset_arqHashPessoa = hashit(pessoa) * sizeof(THP);
+    FILE* fhash = fopen(arqHashPessoa, "rb");
+    if(!fhash) exit(1);
     
-    TR aux;
-    while(offset != -1){
-        fseek(fdados, offset, SEEK_SET);
-        fread(&aux, sizeof(TR), 1, fdados);
-        if(strcasecmp(aux.nome, pessoa) == 0){
-            if(aux.valido == 1){
-                TR* resp = (TR*) malloc(sizeof(TR));
-                strcpy(resp->nome, aux.nome);
-                resp->tipo = aux.tipo;
-                strcpy(resp->papel, aux.papel);
-                resp->prox = aux.prox; 
-                fclose(fdados);
-                return resp;
-            }
-            fclose(fdados);
-            return NULL;
-        }
-        offset = aux.prox;
+    int offset_dado;
+    THP hashNode;
+    fseek(fhash, offset_arqHashPessoa, SEEK_SET);
+    fread(&hashNode, sizeof(THP), 1, fhash);
+    fclose(fhash);
+    offset_dado = hashNode.offset;
+    if((offset_dado == -1) || (strcasecmp(hashNode.nome_pessoa, pessoa) != 0)){
+        return -1;
     }
-    fclose(fdados);
-    return NULL;
+    return offset_dado;
 }
 
-int TR_busca_endereco_elem(char* filme, char* pessoa){
+int TR_busca_endereco(char* filme, char* nome_pessoa, TipoRelacao tipo, char* papel){
     int offset = TR_busca_filme(filme);
     if(offset == -1) return -1;
 
     FILE* fdados = fopen(arqDado, "rb");
     if(!fdados) exit(1);
 
-    
     TR aux;
     while(offset != -1){
         fseek(fdados, offset, SEEK_SET);
         fread(&aux, sizeof(TR), 1, fdados);
-        if(strcasecmp(aux.nome, pessoa) == 0){
+        if(strcasecmp(aux.nome_pessoa, nome_pessoa) == 0 &&
+           aux.tipo == tipo &&
+           strcasecmp(aux.papel, papel) == 0){
             if(aux.valido == 1){
                 fclose(fdados);
                 return offset;
@@ -353,42 +344,42 @@ int TR_busca_endereco_elem(char* filme, char* pessoa){
             fclose(fdados);
             return -1;
         }
-        offset = aux.prox;
+        offset = aux.THFprox;
     }
     fclose(fdados);
     return -1;
 }
 
-int TR_busca_endereco_por_papel(char* filme, char* nome_pessoa, char* papel){
-    int offset = TR_busca_filme(filme);
+int TR_busca_endereco_por_pessoa(char* filme, char* nome_pessoa, TipoRelacao tipo, char* papel){
+    int offset = TR_busca_pessoa(nome_pessoa);
     if(offset == -1) return -1;
 
     FILE* fdados = fopen(arqDado, "rb");
     if(!fdados) exit(1);
 
-    
     TR aux;
     while(offset != -1){
         fseek(fdados, offset, SEEK_SET);
         fread(&aux, sizeof(TR), 1, fdados);
-        if(strcasecmp(aux.nome, nome_pessoa) == 0){
-            if(strcasecmp(aux.papel, papel) == 0){
-                if(aux.valido == 1){
-                    fclose(fdados);
-                    return offset;
-                }
+        if(strcasecmp(aux.nome_filme, filme) == 0 &&
+           aux.tipo == tipo &&
+           strcasecmp(aux.papel, papel) == 0){
+            if(aux.valido == 1){
                 fclose(fdados);
-                return -1;
+                return offset;
             }
+            fclose(fdados);
+            return -1;
         }
-        offset = aux.prox;
+        offset = aux.THPprox;
     }
     fclose(fdados);
     return -1;
 }
 
-int TR_busca_anterior(FILE* fdados, char* filme, char* nome_pessoa){
+int TR_busca_filme_anterior(FILE* fdados, char* filme, char* nome_pessoa, TipoRelacao tipo, char* papel){
     int offset = TR_busca_filme(filme);
+
     if(offset == -1) return -1;
 
     int offset_anterior = -1;
@@ -398,17 +389,19 @@ int TR_busca_anterior(FILE* fdados, char* filme, char* nome_pessoa){
         fseek(fdados, offset, SEEK_SET);
         fread(&aux, sizeof(TR), 1, fdados);
 
-        if(strcasecmp(aux.nome, nome_pessoa) == 0 && aux.valido == 1){
+        if(strcasecmp(aux.nome_pessoa, nome_pessoa) == 0
+        && (aux.tipo == tipo) && (strcasecmp(aux.papel, papel) == 0)
+        && aux.valido == 1){
             return offset_anterior;
         }
         offset_anterior = offset;
-        offset = aux.prox;
+        offset = aux.THFprox;
     }
     return -1;
 }
 
-int TR_busca_anterior_por_papel(FILE* fdados, char* filme, char* nome_pessoa, char* papel){
-    int offset = TR_busca_filme(filme);
+int TR_busca_pessoa_anterior(FILE* fdados, char* filme, char* nome_pessoa, TipoRelacao tipo, char* papel){
+    int offset = TR_busca_pessoa(nome_pessoa);
     if(offset == -1) return -1;
 
     int offset_anterior = -1;
@@ -418,99 +411,128 @@ int TR_busca_anterior_por_papel(FILE* fdados, char* filme, char* nome_pessoa, ch
         fseek(fdados, offset, SEEK_SET);
         fread(&aux, sizeof(TR), 1, fdados);
 
-        if((strcasecmp(aux.nome, nome_pessoa) == 0 && aux.valido == 1) && strcasecmp(aux.papel, papel) == 0){
+        if(strcasecmp(aux.nome_filme, filme) == 0
+        && (aux.tipo == tipo) && (strcasecmp(aux.papel, papel) == 0)
+        && aux.valido == 1){
             return offset_anterior;
         }
         offset_anterior = offset;
-        offset = aux.prox;
+        offset = aux.THPprox;
     }
     return -1;
 }
 
-void TR_retira_relacao_por_nome(char* filme, char* nome_pessoa){
-    int offset_rel = TR_busca_endereco_elem(filme, nome_pessoa);
-    if(offset_rel == -1) return;
+void TR_retira_relacionamento(FILE* fdados, char* filme, char* nome_pessoa, TipoRelacao tipo, char* papel){
 
-    FILE* fdados = fopen(arqDado, "rb+");
-    if(!fdados) exit(1);
+    int offset_filme_ant = TR_busca_filme_anterior(fdados, filme, nome_pessoa, tipo, papel);
+    int offset_pessoa_ant = TR_busca_pessoa_anterior(fdados, filme, nome_pessoa, tipo, papel);
+    int offset_elem = TR_busca_endereco(filme, nome_pessoa, tipo, papel);
 
-    int offset_ant = TR_busca_anterior(fdados, filme, nome_pessoa);
+    TR aux;
+    if(offset_elem == -1) return;
+    fseek(fdados, offset_elem, SEEK_SET);
+    fread(&aux, sizeof(TR), 1, fdados);
 
-    TR rel;
-    fseek(fdados, offset_rel, SEEK_SET);
-    fread(&rel, sizeof(TR), 1, fdados);
+    if(offset_filme_ant == -1 && offset_pessoa_ant == -1){
+        if(aux.THFprox == -1)
+            escreve_hash_filme_vazio(hashit(filme) * sizeof(THF));
+        else
+            atualiza_root_filme(hashit(filme) * sizeof(THF), aux.THFprox);
 
-    if(offset_ant != -1){
-        TR anterior;
-        fseek(fdados, offset_ant, SEEK_SET);
-        fread(&anterior, sizeof(TR), 1, fdados);
-        anterior.prox = rel.prox;
-        fseek(fdados, offset_ant, SEEK_SET);
-        fwrite(&anterior, sizeof(TR), 1, fdados);
+        if(aux.THPprox == -1)
+            escreve_hash_pessoa_vazio(hashit(nome_pessoa) * sizeof(THP));
+        else
+            atualiza_root_pessoa(hashit(nome_pessoa) * sizeof(THP), aux.THPprox);
     }
 
-    fseek(fdados, offset_rel, SEEK_SET);
-    rel.valido = 0;
-    fwrite(&rel, sizeof(TR), 1, fdados);
-    push_livre(offset_rel);
+    else if((offset_filme_ant == -1) && (offset_pessoa_ant != -1)){
+        TR atualizado;
+        fseek(fdados, offset_pessoa_ant, SEEK_SET);
+        fread(&atualizado, sizeof(TR), 1, fdados);
+        atualizado.THPprox = aux.THPprox;
+        fseek(fdados, offset_pessoa_ant, SEEK_SET);
+        fwrite(&atualizado, sizeof(TR), 1, fdados);
+
+    if(aux.THFprox == -1)
+        escreve_hash_filme_vazio(hashit(filme) * sizeof(THF));
+    else
+        atualiza_root_filme(hashit(filme) * sizeof(THF), aux.THFprox);
+    }
+    else if((offset_filme_ant != -1) && (offset_pessoa_ant == -1)){
+        TR atualizado;
+        fseek(fdados, offset_filme_ant, SEEK_SET);
+        fread(&atualizado, sizeof(TR), 1, fdados);
+        atualizado.THFprox = aux.THFprox;
+        fseek(fdados, offset_filme_ant, SEEK_SET);
+        fwrite(&atualizado, sizeof(TR), 1, fdados);
+
+        if(aux.THPprox == -1)
+            escreve_hash_pessoa_vazio(hashit(nome_pessoa) * sizeof(THP));
+       else
+            atualiza_root_pessoa(hashit(nome_pessoa) * sizeof(THP), aux.THPprox);
+    
+    }
+    else{
+        TR atualizado;
+        fseek(fdados, offset_filme_ant, SEEK_SET);
+        fread(&atualizado, sizeof(TR), 1, fdados);
+        atualizado.THFprox = aux.THFprox;
+        fseek(fdados, offset_filme_ant, SEEK_SET);
+        fwrite(&atualizado, sizeof(TR), 1, fdados);
+
+        fseek(fdados, offset_pessoa_ant, SEEK_SET);
+        fread(&atualizado, sizeof(TR), 1, fdados);
+        atualizado.THPprox = aux.THPprox;
+        fseek(fdados, offset_pessoa_ant, SEEK_SET);
+        fwrite(&atualizado, sizeof(TR), 1, fdados);
+    }
+
+    fseek(fdados, offset_elem, SEEK_SET);
+    aux.valido = 0;
+    aux.THFprox = -1;
+    aux.THPprox = -1;
+    fwrite(&aux, sizeof(TR), 1, fdados);
+    push_livre(offset_elem);
+    int novo_root = TR_busca_filme(filme);
+}
+
+void TR_retira_relacao(char* filme, char* nome_pessoa, TipoRelacao tipo, char* papel){
+    FILE* fdados = fopen(arqDado, "rb+");
+    if(!fdados) exit(1);
+    TR_retira_relacionamento(fdados, filme, nome_pessoa, tipo, papel);
     fclose(fdados);
 }
 
-void TR_retira_relacao_por_papel(char* filme, char* nome_pessoa, char* papel){
-    int offset_rel = TR_busca_endereco_por_papel(filme, nome_pessoa, papel);
-    if(offset_rel == -1) return;
-
+void TR_retira_pessoa(char* pessoa){
+    int data_offset = TR_busca_pessoa(pessoa);
+    if(data_offset == -1) return;
     FILE* fdados = fopen(arqDado, "rb+");
     if(!fdados) exit(1);
+    TR aux;
 
-    int offset_ant = TR_busca_anterior_por_papel(fdados, filme, nome_pessoa, papel);
-
-    TR rel;
-    fseek(fdados, offset_rel, SEEK_SET);
-    fread(&rel, sizeof(TR), 1, fdados);
-
-    if(offset_ant != -1){
-        TR anterior;
-        fseek(fdados, offset_ant, SEEK_SET);
-        fread(&anterior, sizeof(TR), 1, fdados);
-        anterior.prox = rel.prox;
-        fseek(fdados, offset_ant, SEEK_SET);
-        fwrite(&anterior, sizeof(TR), 1, fdados);
+    while(TR_busca_pessoa(pessoa) != -1){
+    data_offset = TR_busca_pessoa(pessoa);
+    fseek(fdados, data_offset, SEEK_SET);
+    fread(&aux, sizeof(TR), 1, fdados);
+    TR_retira_relacionamento(fdados, aux.nome_filme, aux.nome_pessoa, aux.tipo, aux.papel);
     }
-
-    fseek(fdados, offset_rel, SEEK_SET);
-    rel.valido = 0;
-    fwrite(&rel, sizeof(TR), 1, fdados);
-    push_livre(offset_rel);
     fclose(fdados);
 }
 
-void TR_retira_tudo(char* filme){
-    int hash_offset = hashit(filme) * sizeof(int);
-    FILE* fhash = fopen(arqHash, "rb+");
-    if(!fhash) exit(1);
-    int data_offset;
-    fseek(fhash, hash_offset, SEEK_SET);
-    fread(&data_offset, sizeof(int), 1, fhash);
-    FILE* fdata = fopen(arqDado, "rb+");
-    if(!fdata) exit(1);
-    TR rel;
-    while(data_offset != -1){
-        fseek(fdata, data_offset, SEEK_SET);
-        fread(&rel, sizeof(TR), 1, fdata);
-        if(rel.valido == 1) {
-            fseek(fdata, data_offset, SEEK_SET);
-            rel.valido = 0;
-            fwrite(&rel, sizeof(TR), 1, fdata);
-            push_livre(data_offset);
-        }
-        data_offset = rel.prox;
+void TR_retira_filme(char* filme){
+   int data_offset = TR_busca_filme(filme);
+    if(data_offset == -1) return;
+    FILE* fdados = fopen(arqDado, "rb+");
+    if(!fdados) exit(1);
+    TR aux;
+
+    while(TR_busca_filme(filme) != -1){
+        data_offset = TR_busca_filme(filme);
+        fseek(fdados, data_offset, SEEK_SET);
+        fread(&aux, sizeof(TR), 1, fdados);
+        TR_retira_relacionamento(fdados, aux.nome_filme, aux.nome_pessoa, aux.tipo, aux.papel);
     }
-    fseek(fhash, hash_offset, SEEK_SET);
-    int vazio = -1;
-    fwrite(&vazio, sizeof(int), 1, fhash);
-    fclose(fhash);
-    fclose(fdata);
+    fclose(fdados);
 }
 
 void TR_imprime_relacoes_filme_pessoa(char* filme, char* pessoa){
@@ -528,36 +550,37 @@ void TR_imprime_relacoes_filme_pessoa(char* filme, char* pessoa){
     while(offset != -1){
         fseek(fdados, offset, SEEK_SET);
         fread(&aux, sizeof(TR), 1, fdados);
-        if(strcasecmp(aux.nome, pessoa) == 0 && aux.valido == 1){
+        if(strcasecmp(aux.nome_pessoa, pessoa) == 0 && aux.valido == 1){
             encontrou = 1;
-            printf("Nome: %s | Tipo: %d | Papel: %s\n", aux.nome, aux.tipo, aux.papel);
+            printf("Nome: %s | Tipo: %d | Papel: %s\n", aux.nome_pessoa, aux.tipo, aux.papel);
         }
-        offset = aux.prox;
+        offset = aux.THFprox;
     }
     if(!encontrou) printf("Nenhum relacionamento encontrado!\n");
     fclose(fdados);
 }
 
 void TR_imprime_relacoes_filme(char* filme){
-
     int offset = TR_busca_filme(filme);
-
     if(offset == -1){
         printf("Filme não encontrado!\n");
         return;
     }
-
+    int offset_filme = hashit(filme) * sizeof(THF);
+    FILE* fhash = fopen(arqHashFilme, "rb");
+    fseek(fhash, offset_filme, SEEK_SET);
+    THF hashNode;
+    fread(&hashNode, sizeof(THF), 1, fhash);
+    strcpy(filme, hashNode.filme);
+    fclose(fhash);
     FILE* fdados = fopen(arqDado, "rb");
-
     if(!fdados) exit(1);
-
-    printf("=== %s ===\n", filme);
+    
+    printf("\n=== %s ===\n", filme);
     TR aux;
     while(offset != -1){
-        
         fseek(fdados, offset, SEEK_SET);
         fread(&aux, sizeof(TR), 1, fdados);
-
         if(aux.valido == 1){
             char* tipo_str;
             switch(aux.tipo){
@@ -567,31 +590,70 @@ void TR_imprime_relacoes_filme(char* filme){
                 case WROTE:     tipo_str = "WROTE";     break;
                 default:        tipo_str = "?";         break;
             }
-            printf("  %s | %s | %s\n", aux.nome, tipo_str, aux.papel);
+            printf("  %s | %s | %s\n", aux.nome_pessoa, tipo_str, aux.papel);
         }
-        offset = aux.prox;
+        offset = aux.THFprox;
     }
     fclose(fdados);
 }
 
-void menu(){
+void TR_imprime_relacoes_pessoa(char* pessoa){
+    int offset = TR_busca_pessoa(pessoa);
+    if(offset == -1){
+        printf("Pessoa não encontrado!\n");
+        return;
+    }
+    int offset_pessoa = hashit(pessoa) * sizeof(THP);
+    FILE* fhash = fopen(arqHashPessoa, "rb");
+    fseek(fhash, offset_pessoa, SEEK_SET);
+    THP hashNode;
+    fread(&hashNode, sizeof(THP), 1, fhash);
+    strcpy(pessoa, hashNode.nome_pessoa);
+    fclose(fhash);
+    FILE* fdados = fopen(arqDado, "rb");
+    if(!fdados) exit(1);
+    
+    printf("\n=== %s ===\n", pessoa);
+    TR aux;
+    while(offset != -1){
+        fseek(fdados, offset, SEEK_SET);
+        fread(&aux, sizeof(TR), 1, fdados);
+        if(aux.valido == 1){
+            char* tipo_str;
+            switch(aux.tipo){
+                case ACTED_IN:  tipo_str = "ACTED_IN";  break;
+                case DIRECTED:  tipo_str = "DIRECTED";  break;
+                case PRODUCED:  tipo_str = "PRODUCED";  break;
+                case WROTE:     tipo_str = "WROTE";     break;
+                default:        tipo_str = "?";         break;
+            }
+            printf("  %s | %s | %s\n", tipo_str, aux.nome_filme, aux.papel);
+        }
+        offset = aux.THPprox;
+    }
+    fclose(fdados);
+}
+
+void TR_menu(){
     int opcao;
     char filme[100];
     char nome[50];
     char papel[50];
+    int tipo;
 
     do {
         printf("\n=== MENU ===\n");
         printf("1. Inserir relacionamento\n");
         printf("2. Buscar relacionamentos de um filme\n");
-        printf("3. Buscar relacionamentos de uma pessoa num filme\n");
-        printf("4. Remover relacionamento por nome\n");
-        printf("5. Remover relacionamento por papel\n");
+        printf("3. Buscar relacionamentos de uma pessoa\n");
+        printf("4. Buscar relacionamentos de uma pessoa num filme\n");
+        printf("5. Remover relacionamento\n");
         printf("6. Remover todos os relacionamentos de um filme\n");
+        printf("7. Remover todos os relacionamentos de uma pessoa\n");
         printf("0. Sair\n");
         printf("Opcao: ");
         scanf("%d", &opcao);
-        getchar(); // consome o \n deixado pelo scanf
+        getchar();
 
         switch(opcao){
             case 1:
@@ -604,7 +666,6 @@ void menu(){
                 nome[strcspn(nome, "\n")] = '\0';
 
                 printf("Tipo (0=ACTED_IN, 1=DIRECTED, 2=PRODUCED, 3=WROTE): ");
-                int tipo;
                 scanf("%d", &tipo);
                 getchar();
 
@@ -614,11 +675,14 @@ void menu(){
 
                 TR elem;
                 elem.valido = 1;
-                elem.prox = -1;
+                elem.THFprox = -1;
+                elem.THPprox = -1;
                 elem.tipo = tipo;
-                strcpy(elem.nome, nome);
+                strcpy(elem.nome_pessoa, nome);
+                strcpy(elem.nome_filme, filme);
                 strcpy(elem.papel, papel);
-                TR_insere(filme, &elem);
+                THF_insere(&elem);
+                THP_insere(&elem);
                 printf("Inserido com sucesso!\n");
                 break;
 
@@ -630,14 +694,10 @@ void menu(){
                 break;
 
             case 3:
-                printf("Filme: ");
-                fgets(filme, sizeof(filme), stdin);
-                filme[strcspn(filme, "\n")] = '\0';
-
                 printf("Nome da pessoa: ");
                 fgets(nome, sizeof(nome), stdin);
                 nome[strcspn(nome, "\n")] = '\0';
-                TR_imprime_relacoes_filme_pessoa(filme, nome);
+                TR_imprime_relacoes_pessoa(nome);
                 break;
 
             case 4:
@@ -648,8 +708,7 @@ void menu(){
                 printf("Nome da pessoa: ");
                 fgets(nome, sizeof(nome), stdin);
                 nome[strcspn(nome, "\n")] = '\0';
-                TR_retira_relacao_por_nome(filme, nome);
-                printf("Removido com sucesso!\n");
+                TR_imprime_relacoes_filme_pessoa(filme, nome);
                 break;
 
             case 5:
@@ -661,10 +720,15 @@ void menu(){
                 fgets(nome, sizeof(nome), stdin);
                 nome[strcspn(nome, "\n")] = '\0';
 
-                printf("Papel: ");
+                printf("Tipo (0=ACTED_IN, 1=DIRECTED, 2=PRODUCED, 3=WROTE): ");
+                scanf("%d", &tipo);
+                getchar();
+
+                printf("Papel (enter para vazio): ");
                 fgets(papel, sizeof(papel), stdin);
                 papel[strcspn(papel, "\n")] = '\0';
-                TR_retira_relacao_por_papel(filme, nome, papel);
+
+                TR_retira_relacao(filme, nome, tipo, papel);
                 printf("Removido com sucesso!\n");
                 break;
 
@@ -672,8 +736,16 @@ void menu(){
                 printf("Filme: ");
                 fgets(filme, sizeof(filme), stdin);
                 filme[strcspn(filme, "\n")] = '\0';
-                TR_retira_tudo(filme);
-                printf("Todos os relacionamentos removidos!\n");
+                TR_retira_filme(filme);
+                printf("Todos os relacionamentos do filme removidos!\n");
+                break;
+
+            case 7:
+                printf("Nome da pessoa: ");
+                fgets(nome, sizeof(nome), stdin);
+                nome[strcspn(nome, "\n")] = '\0';
+                TR_retira_pessoa(nome);
+                printf("Todos os relacionamentos da pessoa removidos!\n");
                 break;
 
             case 0:
@@ -685,4 +757,50 @@ void menu(){
                 break;
         }
     } while(opcao != 0);
+}
+
+void escreve_hash_filme_vazio(int offset){
+    FILE* fhash = fopen(arqHashFilme, "rb+");
+    fseek(fhash, offset, SEEK_SET);
+    int vazio = -1;
+    char nome_vazio[] = "\0";
+    THF hashNode;
+    strcpy(hashNode.filme, nome_vazio);
+    hashNode.offset = vazio;
+    fwrite(&hashNode, sizeof(THF), 1, fhash);
+    fclose(fhash);
+}
+
+void escreve_hash_pessoa_vazio(int offset){
+    FILE* fhash = fopen(arqHashPessoa, "rb+");
+    fseek(fhash, offset, SEEK_SET);
+    int vazio = -1;
+    char nome_vazio[] = "\0";
+    THP hashNode;
+    strcpy(hashNode.nome_pessoa, nome_vazio);
+    hashNode.offset = vazio;
+    fwrite(&hashNode, sizeof(THP), 1, fhash);
+    fclose(fhash);
+}
+
+void atualiza_root_filme(int offset_movie, int offset_relationships){
+    FILE* fhash = fopen(arqHashFilme, "rb+");
+    fseek(fhash, offset_movie, SEEK_SET);
+    THF hashNode;
+    fread(&hashNode, sizeof(THF), 1, fhash);
+    hashNode.offset = offset_relationships;
+    fseek(fhash, offset_movie, SEEK_SET);
+    fwrite(&hashNode, sizeof(THF), 1, fhash);
+    fclose(fhash);
+}
+
+void atualiza_root_pessoa(int offset_pessoa, int offset_relationship){
+     FILE* fhash = fopen(arqHashPessoa, "rb+");
+    fseek(fhash, offset_pessoa, SEEK_SET);
+    THP hashNode;
+    fread(&hashNode, sizeof(THP), 1, fhash);
+    hashNode.offset = offset_relationship;
+    fseek(fhash, offset_pessoa, SEEK_SET);
+    fwrite(&hashNode, sizeof(THP), 1, fhash);
+    fclose(fhash);
 }
