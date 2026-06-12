@@ -36,7 +36,7 @@ void TARVBMS_insere_um(TD *entidade);
 void TARVBMS_preenche_arvore(char* txt);
 //void TARVBMS_insere_um_do_arquivotxt(char *nome, int t);
 
-void TARVBMS_divisao_folha(FILE *f,long pos_no, int ind_folha, int i);
+void TARVBMS_divisao_folha(FILE *f, long pos_no, int i_filho, int indice_folha);
 void TARVBMS_retira(char *chave);
 int TARVBMS_remove_da_folha(int indice_folha, char *chave, int t);
 void TARVBMS_removezada(FILE *f, long pos_no, char*chave, int t);
