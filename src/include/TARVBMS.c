@@ -55,9 +55,6 @@ long TARVBMS_busca_index_invalido(){
     return -1;
 }
 
-
-
-
 void TARVBMS_escreve_no(long pos, TARVBMSDADOS dados, char *ids, long *filhos, char *nome_arq){
     FILE *f = fopen("../dados/index.bin", "rb+");
     if(!f){
@@ -149,9 +146,10 @@ void TARVBMS_insere_um_do_arquivotxt(char *nome, int t){
 }
 */
 
-void TARVBMS_divide_no_interno(FILE *f, long pos, long pos_pai, int t){
-    if(!f){
-        printf("Não foi passado um arquivo valido para o divide_no_interno");
+void TARVBMS_divide_no_interno(long pos, long pos_pai, int t){
+    FILE *f = fopen("../dados/index.bin", "rb+");
+    if (!f) {
+        printf("Erro ao abrir arquivo para divide_no_interno");
         exit(1);
     }
 
@@ -167,12 +165,13 @@ void TARVBMS_divide_no_interno(FILE *f, long pos, long pos_pai, int t){
     le_no_interno(f, pos, &infos_ant, ids_ant, filhos_ant, arq_folha_ant);
 
 
-    TARVBMSDADOS info_pai;
+    TARVBMSDADOS infos_pai;
     char ids_pai[max_chaves][TAM_NOME];
     long filhos_pai[max_chaves +  1];
     char arq_folha_pai[max_chaves + 1][TAM_ARQ_FOLHA];
 
-    le_no_interno(f, pos_pai, &info_pai, ids_pai, filhos_pai, arq_folha_pai);
+    le_no_interno(f, pos_pai, &infos_pai, ids_pai, filhos_pai, arq_folha_pai);
+    fclose(f);
 
     // infos do novo no criado
     TARVBMSDADOS infos_novo;
@@ -185,11 +184,138 @@ void TARVBMS_divide_no_interno(FILE *f, long pos, long pos_pai, int t){
     infos_novo.nchaves = t - 1;
     infos_novo.val = 1;
 
-    for(int j = 0; j < t - 1; j++){
+    for(int j = 0; j < t - 1; j++){ // Copia da metade para frente do ids_ant para o ids_novo
         strcpy(ids_novo[j], ids_ant[j + t]);
     }
 
-    // Preciso acabar essa função
+    if(!infos_ant.filho_folha){
+        for(int j = 0; j < t; j++){
+            filhos_novo[j] = filhos_ant[j + t];
+            filhos_ant[j + t] = -1;
+        }
+    }
+    else{
+        for(int j = 0; j < t; j++){
+            strcpy(arq_folha_novo[j], arq_folha_ant[j + t]);
+        }
+    }
+
+    infos_ant.nchaves = t - 1;
+
+    int i = infos_pai.nchaves;
+
+    while(i > 0 && filhos_pai[i] != pos) i--;
+    i++;
+
+    for(int j = infos_pai.nchaves; j >= i; j--){
+        filhos_pai[j + 1] = filhos_pai[j];
+    }
+
+    for(int j = infos_pai.nchaves - 1; j >= i - 1; j--){
+        strcpy(ids_pai[j + 1], ids_pai[j]);
+    }
+
+    strcpy(ids_pai[i - 1], ids_ant[meio]);
+
+    infos_pai.nchaves++;
+
+    long pos_novo = TARVBMS_cria_novo_no(infos_novo, ids_novo, filhos_novo, arq_folha_novo);
+    filhos_pai[i] = pos_novo;
+
+    TARVBMS_escreve_no(pos, infos_ant, ids_ant, filhos_ant, arq_folha_ant);
+    TARVBMS_escreve_no(pos_pai, infos_pai, ids_pai, filhos_pai, arq_folha_pai);
+}
+
+void TARVBMS_divisao_folha(FILE *f, long pos_no, int i_filho, int indice_folha) {
+    TConfig config;
+    fseek(f, 0, SEEK_SET);
+    fread(&config, sizeof(TConfig), 1, f);
+    int t = config.t;
+    int tam_max = (2 * t) - 1;
+    int indice_nova = config.indice;
+
+    TFOLHA *folha_velha = TFOLHA_le(indice_folha, t);
+    if (!folha_velha) {
+        printf("Erro ao ler folha_%d! Funcao TARVBMS_divisao_folha\n", indice_folha);
+        exit(1);
+    }
+
+    TFOLHA *folha_nova = TFOLHA_aloca(t);
+    int n_nova = t;
+    int n_velha = t - 1;
+    config.indice++;
+
+    for (int i = 0; i < n_nova; i++)
+        folha_nova->entidades[i] = folha_velha->entidades[(t - 1) + i];
+
+    folha_nova->dados.nchaves = n_nova;
+    folha_velha->dados.nchaves = n_velha;
+
+    strcpy(folha_nova->dados.prox, folha_velha->dados.prox);
+    sprintf(folha_velha->dados.prox, "folha_%d.bin", indice_nova);
+
+    TFOLHA_cria(folha_velha, t, indice_folha);
+    TFOLHA_cria(folha_nova, t, indice_nova);
+
+    char chave_promovida[TAM_NOME];
+    if (folha_nova->entidades[0].tipo == TIPO_PESSOA)
+        strcpy(chave_promovida, folha_nova->entidades[0].dados.pessoa.nome);
+    else
+        strcpy(chave_promovida, folha_nova->entidades[0].dados.filme.titulo);
+
+    free(folha_velha->entidades); 
+    free(folha_velha);
+    free(folha_nova->entidades);
+    free(folha_nova);
+
+    fseek(f, 0, SEEK_SET);
+    fwrite(&config, sizeof(TConfig), 1, f);
+
+    if (pos_no == -1) {
+        TARVBMSDADOS nova_raiz;
+        nova_raiz.nchaves = 1;
+        nova_raiz.val = 1;
+        nova_raiz.filho_folha = 1;
+
+        char ids[1][TAM_NOME];
+        strcpy(ids[0], chave_promovida);
+
+        char arq_folha[2][TAM_ARQ_FOLHA];
+        sprintf(arq_folha[0], "folha_%d.bin", indice_folha);
+        sprintf(arq_folha[1], "folha_%d.bin", indice_nova);
+
+        long pos_raiz = sizeof(TConfig);
+        fseek(f, pos_raiz, SEEK_SET);
+        fwrite(&nova_raiz, sizeof(TARVBMSDADOS),        1, f);
+        fwrite(ids,        sizeof(char) * TAM_NOME,     1, f);
+        fwrite(arq_folha,  sizeof(char) * TAM_ARQ_FOLHA, 2, f);
+
+        config.raiz = pos_raiz;
+        fseek(f, 0, SEEK_SET);
+        fwrite(&config, sizeof(TConfig), 1, f);
+        return;
+    }
+
+    TARVBMSDADOS infos_pai;
+    char ids_pai[tam_max][TAM_NOME];
+    long filhos_pai[tam_max + 1];
+    char arq_folha_pai[tam_max + 1][TAM_ARQ_FOLHA];
+
+    le_no_interno(f, pos_no, &infos_pai, ids_pai, filhos_pai, arq_folha_pai);
+
+    for (int j = infos_pai.nchaves; j > i_filho; j--) {
+        strcpy(ids_pai[j], ids_pai[j - 1]);
+        strcpy(arq_folha_pai[j + 1], arq_folha_pai[j]);
+    }
+
+    strcpy(ids_pai[i_filho], chave_promovida);
+    sprintf(arq_folha_pai[i_filho + 1], "folha_%d.bin", indice_nova);
+    infos_pai.nchaves++;
+
+    fseek(f, pos_no, SEEK_SET);
+    fwrite(&infos_pai,    sizeof(TARVBMSDADOS),          1,                    f);
+    fwrite(ids_pai,       sizeof(char) * TAM_NOME,       infos_pai.nchaves,    f);
+    fwrite(arq_folha_pai, sizeof(char) * TAM_ARQ_FOLHA,  infos_pai.nchaves + 1, f);
 }
 
 void TARVBMS_insere_nao_completo(FILE *f, long pos_no, TD *entidade, int t)
@@ -359,98 +485,6 @@ void TARVBMS_insere_um(TD *entidade)
         }
         fclose(f);
     }
-}
-
-void TARVBMS_divisao_folha(FILE *f, long pos_no, int i_filho, int indice_folha) {
-    TConfig config;
-    fseek(f, 0, SEEK_SET);
-    fread(&config, sizeof(TConfig), 1, f);
-    int t = config.t;
-    int tam_max = (2 * t) - 1;
-    int indice_nova = config.indice;
-
-    TFOLHA *folha_velha = TFOLHA_le(indice_folha, t);
-    if (!folha_velha) {
-        printf("Erro ao ler folha_%d! Funcao TARVBMS_divisao_folha\n", indice_folha);
-        exit(1);
-    }
-
-    TFOLHA *folha_nova = TFOLHA_aloca(t);
-    int n_nova = t;
-    int n_velha = t - 1;
-    config.indice++;
-
-    for (int i = 0; i < n_nova; i++)
-        folha_nova->entidades[i] = folha_velha->entidades[(t - 1) + i];
-
-    folha_nova->dados.nchaves = n_nova;
-    folha_velha->dados.nchaves = n_velha;
-
-    strcpy(folha_nova->dados.prox, folha_velha->dados.prox);
-    sprintf(folha_velha->dados.prox, "folha_%d.bin", indice_nova);
-
-    TFOLHA_cria(folha_velha, t, indice_folha);
-    TFOLHA_cria(folha_nova, t, indice_nova);
-
-    char chave_promovida[TAM_NOME];
-    if (folha_nova->entidades[0].tipo == TIPO_PESSOA)
-        strcpy(chave_promovida, folha_nova->entidades[0].dados.pessoa.nome);
-    else
-        strcpy(chave_promovida, folha_nova->entidades[0].dados.filme.titulo);
-
-    free(folha_velha->entidades); 
-    free(folha_velha);
-    free(folha_nova->entidades);
-    free(folha_nova);
-
-    fseek(f, 0, SEEK_SET);
-    fwrite(&config, sizeof(TConfig), 1, f);
-
-    if (pos_no == -1) {
-        TARVBMSDADOS nova_raiz;
-        nova_raiz.nchaves = 1;
-        nova_raiz.val = 1;
-        nova_raiz.filho_folha = 1;
-
-        char ids[1][TAM_NOME];
-        strcpy(ids[0], chave_promovida);
-
-        char arq_folha[2][TAM_ARQ_FOLHA];
-        sprintf(arq_folha[0], "folha_%d.bin", indice_folha);
-        sprintf(arq_folha[1], "folha_%d.bin", indice_nova);
-
-        long pos_raiz = sizeof(TConfig);
-        fseek(f, pos_raiz, SEEK_SET);
-        fwrite(&nova_raiz, sizeof(TARVBMSDADOS),        1, f);
-        fwrite(ids,        sizeof(char) * TAM_NOME,     1, f);
-        fwrite(arq_folha,  sizeof(char) * TAM_ARQ_FOLHA, 2, f);
-
-        config.raiz = pos_raiz;
-        fseek(f, 0, SEEK_SET);
-        fwrite(&config, sizeof(TConfig), 1, f);
-        return;
-    }
-
-    TARVBMSDADOS infos_pai;
-    char ids_pai[tam_max][TAM_NOME];
-    long filhos_pai[tam_max + 1];
-    char arq_folha_pai[tam_max + 1][TAM_ARQ_FOLHA];
-
-    le_no_interno(f, pos_no, &infos_pai, ids_pai, filhos_pai, arq_folha_pai);
-
-    for (int j = infos_pai.nchaves; j > i_filho; j--) {
-        strcpy(ids_pai[j], ids_pai[j - 1]);
-        strcpy(arq_folha_pai[j + 1], arq_folha_pai[j]);
-    }
-
-    strcpy(ids_pai[i_filho], chave_promovida);
-    sprintf(arq_folha_pai[i_filho + 1], "folha_%d.bin", indice_nova);
-    infos_pai.nchaves++;
-
-    fseek(f, pos_no, SEEK_SET);
-    fwrite(&infos_pai,    sizeof(TARVBMSDADOS),          1,                    f);
-    fwrite(ids_pai,       sizeof(char) * TAM_NOME,       infos_pai.nchaves,    f);
-    fwrite(arq_folha_pai, sizeof(char) * TAM_ARQ_FOLHA,  infos_pai.nchaves + 1, f);
 }
 
 void TARVBMS_removezada(FILE *f, long pos_no, char*chave, int t){
