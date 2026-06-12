@@ -11,6 +11,7 @@ TFOLHA *TFOLHA_aloca(int t)
     int tam = (t * 2) - 1;
     novo->entidades = (TD *)malloc(sizeof(TD) * tam);
     novo->dados.nchaves = 1;
+    novo->dados.prox[0] = '\0';
     return novo;
 }
 
@@ -167,7 +168,7 @@ TFOLHA *TFOLHA_carrega(char *nome)
     }
 }
 
-void TFOLHA_insere_na_folha(TD *entidade, int t, int index)
+void TFOLHA_insere(TD *entidade, int t, int index)
 { // Insere ordenado um TD na folha caso não esteja cheia
     char arq[30];
     sprintf(arq, "../dados/folha_%d.bin", index);

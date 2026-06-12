@@ -1,10 +1,58 @@
 #include <stdlib.h>
 #include <string.h>
 #include "../header/TARVBMS.h"
+#include "../header/TFOLHA.h"
 #include "../header/util.h"
+
+void TARVBMS_imprime_folhas() {
+    FILE *f = fopen("../dados/index.bin", "rb+");
+    if (!f) {
+        printf("Erro ao abrir arquivo para imprime_folhas");
+        exit(1);
+    }
+
+    TConfig config;
+    fseek(f, 0, SEEK_SET);
+    fread(&config, sizeof(TConfig), 1, f);
+    int t = config.t;
+    int tam_max = (2 * t) - 1;
+
+    long pos = config.raiz;
+    TARVBMSDADOS infos;
+    char ids[tam_max][TAM_NOME];
+    long filhos[tam_max + 1];
+    char arq_folha[tam_max + 1][TAM_ARQ_FOLHA];
+
+    while (1) {
+        le_no_interno(f, pos, &infos, ids, filhos, arq_folha);
+        if (infos.filho_folha) break;
+        pos = filhos[0];
+    }
+
+    for (int i = 0; i <= infos.nchaves; i++) {
+        int indice;
+        sscanf(arq_folha[i], "folha_%d.bin", &indice);
+
+        TFOLHA *folha = TFOLHA_le(indice, t);
+        if (!folha) {
+            printf("Erro ao ler folha %s\n", arq_folha[i]);
+            exit(1);
+        }
+
+        printf("--- Folha %s ---\n", arq_folha[i]);
+        TFOLHA_imprime(folha);
+        printf("\n");
+
+        free(folha->entidades);
+        free(folha);
+    }
+
+    fclose(f);
+}
 
 void TARVBMS_inicializa(int t) // Cria todos os arquivos vazios
 { 
+    printf("Inicializando indice...\n");
     FILE *f = fopen("../dados/index.bin", "wb");
 
     if (!f)
@@ -55,7 +103,7 @@ long TARVBMS_busca_index_invalido(){
     return -1;
 }
 
-void TARVBMS_escreve_no(long pos, TARVBMSDADOS dados, char *ids, long *filhos, char *nome_arq){
+void TARVBMS_escreve_no(long pos, TARVBMSDADOS dados, char ids[][TAM_NOME], long *filhos, char nome_arq[][TAM_ARQ_FOLHA]){
     FILE *f = fopen("../dados/index.bin", "rb+");
     if(!f){
         printf("Erro ao abrir arquivo para escreve_no");
@@ -81,7 +129,7 @@ void TARVBMS_escreve_no(long pos, TARVBMSDADOS dados, char *ids, long *filhos, c
     fclose(f);
 }
 
-long TARVBMS_cria_novo_no(TARVBMSDADOS dados, char *ids, long *filhos, char *nome_arq){
+long TARVBMS_cria_novo_no(TARVBMSDADOS dados, char ids[][TAM_NOME], long *filhos, char nome_arq[][TAM_ARQ_FOLHA]){
     long pos = TARVBMS_busca_index_invalido();
     
     TARVBMS_escreve_no(pos, dados, ids, filhos, nome_arq);
@@ -277,18 +325,23 @@ void TARVBMS_divisao_folha(FILE *f, long pos_no, int i_filho, int indice_folha) 
         nova_raiz.val = 1;
         nova_raiz.filho_folha = 1;
 
-        char ids[1][TAM_NOME];
+        char ids[tam_max][TAM_NOME];
         strcpy(ids[0], chave_promovida);
 
-        char arq_folha[2][TAM_ARQ_FOLHA];
-        sprintf(arq_folha[0], "folha_%d.bin", indice_folha);
-        sprintf(arq_folha[1], "folha_%d.bin", indice_nova);
+        char arq_folha[tam_max + 1][TAM_ARQ_FOLHA];
+        for(int i = 0; i < tam_max; i++){
+            ids[i][0] = '\0';
+        }
+
+        for(int i = 0; i < tam_max; i++){
+            arq_folha[i][0] = '\0';
+        }
 
         long pos_raiz = sizeof(TConfig);
         fseek(f, pos_raiz, SEEK_SET);
         fwrite(&nova_raiz, sizeof(TARVBMSDADOS),        1, f);
-        fwrite(ids,        sizeof(char) * TAM_NOME,     1, f);
-        fwrite(arq_folha,  sizeof(char) * TAM_ARQ_FOLHA, 2, f);
+        fwrite(ids,        sizeof(char) * TAM_NOME,     tam_max, f);
+        fwrite(arq_folha,  sizeof(char) * TAM_ARQ_FOLHA, tam_max + 1, f);
 
         config.raiz = pos_raiz;
         fseek(f, 0, SEEK_SET);
@@ -314,8 +367,8 @@ void TARVBMS_divisao_folha(FILE *f, long pos_no, int i_filho, int indice_folha) 
 
     fseek(f, pos_no, SEEK_SET);
     fwrite(&infos_pai,    sizeof(TARVBMSDADOS),          1,                    f);
-    fwrite(ids_pai,       sizeof(char) * TAM_NOME,       infos_pai.nchaves,    f);
-    fwrite(arq_folha_pai, sizeof(char) * TAM_ARQ_FOLHA,  infos_pai.nchaves + 1, f);
+    fwrite(ids_pai,       sizeof(char) * TAM_NOME,       tam_max,    f);
+    fwrite(arq_folha_pai, sizeof(char) * TAM_ARQ_FOLHA,  tam_max + 1, f);
 }
 
 void TARVBMS_insere_nao_completo(FILE *f, long pos_no, TD *entidade, int t)
@@ -377,7 +430,7 @@ void TARVBMS_insere_nao_completo(FILE *f, long pos_no, TD *entidade, int t)
         }
 
         printf("Inserindo chave '%s' na folha %d!\n", chave, indice_folha);
-        TFOLHA_insere_na_folha(entidade, t, indice_folha);
+        TFOLHA_insere(entidade, t, indice_folha);
     }
     else
     {
@@ -402,6 +455,12 @@ void TARVBMS_insere_um(TD *entidade)
         printf("Erro na abertura do arquivo, TARBBMS_insere_um!");
         exit(1);
     }
+
+    if(entidade->tipo == TIPO_FILME)
+        printf("Inserindo %s na arvore\n", entidade->dados.filme.titulo);
+    else
+        printf("Inserindo %s na arvore\n", entidade->dados.pessoa.nome);
+
     TConfig config;
     fseek(f, 0, SEEK_SET);
     fread(&config, sizeof(TConfig), 1, f);
@@ -463,7 +522,7 @@ void TARVBMS_insere_um(TD *entidade)
         if (dados_folha.nchaves < max_chaves)
         {
             // Tem espaço, só inserir direto na folha 0
-            TFOLHA_insere_na_folha(entidade, t, 0);
+            TFOLHA_insere(entidade, t, 0);
         }
         else
             TARVBMS_divisao_folha(f, -1, 0, 0);
@@ -547,7 +606,7 @@ void TARVBMS_removezada(FILE *f, long pos_no, char*chave, int t){
     else{
         // FIlho e no interno
         long pos_filho = filhos[i];
-        TARVBMS_retira_recursivo(f, pos_filho, chave, t);
+        //TARVBMS_retira_recursivo(f, pos_filho, chave, t);
         // Fazer a logica dos nores interno
         
     }
@@ -627,6 +686,10 @@ void TARVBMS_retira(char *chave){
 
 void TARVBMS_preenche_arvore(char* txt){
     FILE* fteste = fopen("index.bin", "rb");
+    if(!fteste){
+        printf("Erro ao abrir arquivo de indice para preenche arvore");
+        exit(1);
+    }
     fseek(fteste, 0, SEEK_END);
 
     if(ftell(fteste) > sizeof(int) * 10){
@@ -635,8 +698,10 @@ void TARVBMS_preenche_arvore(char* txt){
     }
     fclose(fteste);
     
+    printf("Preenchendo a arvore...\n");
+
     FILE* finput = fopen(txt, "r");
-    if(!finput) return;
+    if(!finput) exit(1);
     
     char linha[256];
     while(fgets(linha, sizeof(linha), finput)){
