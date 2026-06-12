@@ -74,33 +74,30 @@ void TARVBMS_inicializa(int t) // Cria todos os arquivos vazios
     fclose(f);
 }
 
-long TARVBMS_busca_index_invalido(FILE *f)
+long TARVBMS_busca_index_invalido(FILE *f) 
 {
     rewind(f);
     TConfig c;
-    if (fread(&c, sizeof(TConfig), 1, f) != 1 || c.indice <= 1)
-    {
-        printf("O arquivo está vazio\n");
-        return -1;
-    }
+    fread(&c, sizeof(TConfig), 1, f);
+   
 
     int max_chaves = (c.t * 2) - 1;
 
+    int tam_no = sizeof(TARVBMSDADOS)
+               + max_chaves * TAM_NOME
+               + (max_chaves + 1) * TAM_ARQ_FOLHA
+               + (max_chaves + 1) * sizeof(long);
+
+    long pos = sizeof(TConfig);
+    fseek(f, pos, SEEK_SET);
+
     TARVBMSDADOS infos;
-    int uniao = max_chaves * TAM_NOME;
-    uniao += (max_chaves + 1) * TAM_ARQ_FOLHA;
-
-    long pos = ftell(f);
-
     while (fread(&infos, sizeof(TARVBMSDADOS), 1, f) == 1)
     {
         if (infos.val == 0)
-        {
             return pos;
-        }
-        fseek(f, uniao, SEEK_CUR);
-
-        pos = ftell(f);
+        pos += tam_no;
+        fseek(f, pos, SEEK_SET);
     }
     return -1;
 }
@@ -118,14 +115,9 @@ void TARVBMS_escreve_no(FILE *index, long pos, TARVBMSDADOS dados, char ids[][TA
     fwrite(&dados, sizeof(TARVBMSDADOS), 1, index);
     fwrite(ids, TAM_NOME, max_chaves, index);
 
-    if (dados.filho_folha)
-    {
-        fwrite(nome_arq, TAM_ARQ_FOLHA, max_chaves + 1, index);
-    }
-    else
-    {
-        fwrite(filhos, sizeof(long), max_chaves + 1, index);
-    }
+    fwrite(nome_arq, TAM_ARQ_FOLHA, max_chaves + 1, index);
+
+    fwrite(filhos, sizeof(long), max_chaves + 1, index);
 }
 
 long TARVBMS_cria_novo_no(FILE *index, TARVBMSDADOS dados, char ids[][TAM_NOME], long *filhos, char nome_arq[][TAM_ARQ_FOLHA])
@@ -159,49 +151,6 @@ long TARVBMS_raiz(FILE *arq)
     raiz = temp.raiz;
     return raiz;
 }
-/*
-void TARVBMS_insere_um_do_arquivotxt(char *nome, int t){
-    if (TARVBMS_busca(nome))
-    {
-        printf("Essa entidade ja esta na arvore!\n");
-        return;
-    }
-    FILE *fn = fopen("../../entrada/Nodes.txt", "r");
-    if (!fn)
-    {
-        printf("Erro ao ler o arquivo nodes!\n");
-        exit(1);
-    }
-    TD dado;
-    int achou = 0;
-    while (ler_entidade(fn, &dado))
-    {
-        if (dado.tipo == TIPO_FILME)
-        {
-            if (!strcmp(dado.dados.filme.titulo, nome))
-            {
-                achou = 1;
-                break;
-            }
-        }
-        else if (dado.tipo == TIPO_PESSOA)
-        {
-            if (!strcmp(dado.dados.pessoa.nome, nome))
-            {
-                achou = 1;
-                break;
-            }
-        }
-    }
-    fclose(fn);
-    if (!achou)
-    {
-        printf("Nao existe essa entidade no nodes.txt!");
-        return;
-    }
-    // TARVBMS_insere_um(&dado);
-}
-*/
 
 void TARVBMS_divide_no_interno(FILE *index, long pos, long pos_pai, int t)
 {
@@ -238,6 +187,7 @@ void TARVBMS_divide_no_interno(FILE *index, long pos, long pos_pai, int t)
     for (int j = 0; j < t - 1; j++)
     { // Copia da metade para frente do ids_ant para o ids_novo
         strcpy(ids_novo[j], ids_ant[j + t]);
+        ids_ant[j + t][0] = '\0';
     }
 
     if (!infos_ant.filho_folha)
@@ -253,6 +203,7 @@ void TARVBMS_divide_no_interno(FILE *index, long pos, long pos_pai, int t)
         for (int j = 0; j < t; j++)
         {
             strcpy(arq_folha_novo[j], arq_folha_ant[j + t]);
+            arq_folha_ant[j + t][0] = '\0';
         }
     }
 
@@ -275,6 +226,7 @@ void TARVBMS_divide_no_interno(FILE *index, long pos, long pos_pai, int t)
     }
 
     strcpy(ids_pai[i - 1], ids_ant[meio]);
+    ids_ant[meio][0] = '\0';
 
     infos_pai.nchaves++;
 

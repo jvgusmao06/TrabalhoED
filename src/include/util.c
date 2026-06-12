@@ -41,21 +41,19 @@ int compara_nomes_com_entidades(char *nome, TD *entidade){
     return strcmp(nome, nome2);
 }
 
-void le_no_interno(FILE *f, long posicao, TARVBMSDADOS *infos, char (*ids)[100], long *filhos, char (*arq_folha)[30]){
+void le_no_interno(FILE *f, long posicao, TARVBMSDADOS *infos,
+                   char (*ids)[TAM_NOME], long *filhos, char (*arq_folha)[TAM_ARQ_FOLHA])
+{
+    TConfig cfg;
+    rewind(f);
+    fread(&cfg, sizeof(TConfig), 1, f);
+    int max_chaves = (2 * cfg.t) - 1;
+
     fseek(f, posicao, SEEK_SET);
-
     fread(infos, sizeof(TARVBMSDADOS), 1, f);
-
-    fread(ids, sizeof(char) * 100, infos->nchaves, f);
-
-    if (infos->filho_folha)
-    {
-        fread(arq_folha, sizeof(char) * 30, infos->nchaves + 1, f);
-    }
-    else
-    {
-        fread(filhos, sizeof(long), infos->nchaves + 1, f);
-    }
+    fread(ids, TAM_NOME, max_chaves, f);
+    fread(arq_folha, TAM_ARQ_FOLHA, max_chaves + 1, f);
+    fread(filhos, sizeof(long), max_chaves + 1, f);
 }
 
 void trim(char* str){
