@@ -48,7 +48,7 @@ void le_no_interno(FILE *f, long posicao, TARVBMSDADOS *infos,
     rewind(f);
     fread(&cfg, sizeof(TConfig), 1, f);
     int max_chaves = (2 * cfg.t) - 1;
-
+    
     fseek(f, posicao, SEEK_SET);
     fread(infos, sizeof(TARVBMSDADOS), 1, f);
     fread(ids, TAM_NOME, max_chaves, f);
