@@ -2,131 +2,74 @@
 #include <stdlib.h>
 #include <string.h>
 #include "header/TARVBMS.h"
-#include "header/util.h"
-#include "header/TFOLHA.h"
+#include "header/TD.h"
 
-int main()
+// Função auxiliar para poupar linhas na hora de inserir
+void insere_pessoa(char *nome, int ano) {
+    TD ent;
+    ent.tipo = TIPO_PESSOA;
+    strcpy(ent.dados.pessoa.nome, nome);
+    ent.dados.pessoa.ano = ano;
+    TARVBMS_insere_um(&ent);
+}
+
+int main() 
 {
-    int t = 10;
-
-    /* Limpa dados antigos */
-    system("rm -f ../dados/*.bin");
-
-    /* Inicializa a árvore B+ */
+    // Usamos t=2 para que o limite máximo seja 3 e o mínimo seja 1.
+    // Assim forçamos a árvore a dividir e fundir muito mais rapidamente!
+    int t = 2; 
+    
+    printf("======================================================\n");
+    printf("1. INICIALIZANDO A ARVORE B+ (Ordem t = %d)\n", t);
+    printf("======================================================\n");
     TARVBMS_inicializa(t);
 
-    /* ========== INSERÇÃO ========== */
-    printf("========================================\n");
-    printf("  PREENCHENDO ARVORE COM Nodes.txt\n");
-    printf("========================================\n\n");
-    TARVBMS_preenche_arvore("../entrada/Nodes.txt");
+    printf("\n2. Inserindo elementos...\n");
+    insere_pessoa("Alien", 1979);
+    insere_pessoa("Batman", 1989);
+    insere_pessoa("Coringa", 2008);
+    insere_pessoa("Dracula", 1931);
+    insere_pessoa("Elektra", 1990); 
+    insere_pessoa("Frodo", 2001);
+    insere_pessoa("Gandalf", 2001);
+    insere_pessoa("Hulk", 2003);
 
-    /* ========== ESTRUTURA DA ÁRVORE ========== */
-    printf("\n========================================\n");
-    printf("  ESTRUTURA DA ARVORE B+\n");
-    printf("========================================\n\n");
+    printf("\n--- ARVORE APOS INSERCOES ---\n");
+    TARVBMS_imprime();
+    printf("\n");
+    TARVBMS_imprime_folhas();
+
+    printf("\n======================================================\n");
+    printf("3. TESTANDO REMOCOES E BALANCEAMENTO\n");
+    printf("======================================================\n");
+
+    // CASO 1: A folha tem chaves suficientes, é só apagar e deslocar o vetor
+    printf("\n-> CASO 1: Remocao simples (Sem Underflow)\n");
+    printf("Retirando 'Hulk'...\n");
+    TARVBMS_retira("Hulk");
+    printf("\nArvore apos retirar Hulk:\n");
     TARVBMS_imprime();
 
-    /* ========== FOLHAS ENCADEADAS ========== */
-    printf("\n========================================\n");
-    printf("  FOLHAS ENCADEADAS (ordem alfabetica)\n");
-    printf("========================================\n\n");
+    // CASO 2: A folha fica com 0 chaves (Underflow) mas o vizinho tem para emprestar
+    printf("\n-> CASO 2: Remocao causando EMPRESTIMO (Redistribuicao)\n");
+    printf("Retirando 'Gandalf'...\n");
+    TARVBMS_retira("Gandalf");
+    printf("\nArvore apos retirar Gandalf:\n");
+    TARVBMS_imprime();
+
+    // CASO 3: A folha fica com 0 chaves e o vizinho só tem 1 chave (limite mínimo).
+    // Vai ter de ocorrer uma FUSÃO (Merge) de folhas!
+    printf("\n-> CASO 3: Remocao causando FUSAO (Merge) e reajuste no Pai\n");
+    printf("Retirando 'Frodo'...\n");
+    TARVBMS_retira("Frodo");
+    printf("\nArvore apos retirar Frodo:\n");
+    TARVBMS_imprime();
+
+    printf("\n======================================================\n");
+    printf("4. CONFERINDO A LISTA DE FOLHAS FINAL\n");
+    printf("======================================================\n");
+    // Aqui verificamos se o encadeamento 'prox' sobreviveu às fusões!
     TARVBMS_imprime_folhas();
-
-    /* ========== BUSCA ========== */
-    printf("\n========================================\n");
-    printf("  TESTE DE BUSCA\n");
-    printf("========================================\n\n");
-
-    char *buscas[] = {
-        "Keanu Reeves",
-        "The Matrix",
-        "Tom Hanks",
-        "Forrest Gump",
-        "Nao Existe Este Nome",
-        "Hugo Weaving"
-    };
-    int n_buscas = sizeof(buscas) / sizeof(buscas[0]);
-
-    for (int i = 0; i < n_buscas; i++)
-    {
-        TFOLHA *resultado = TFOLHA_carrega(buscas[i]);
-        if (resultado)
-        {
-            printf("  [OK] '%s' encontrado.\n", buscas[i]);
-            free(resultado->entidades);
-            free(resultado);
-        }
-        else
-        {
-            printf("  [--] '%s' NAO encontrado.\n", buscas[i]);
-        }
-    }
-
-    /* ========== REMOÇÃO ========== */
-    printf("\n========================================\n");
-    printf("  TESTE DE REMOCAO\n");
-    printf("========================================\n\n");
-
-    char *remocoes[] = {
-        "Keanu Reeves",
-        "The Matrix",
-        "Tom Hanks"
-    };
-    int n_remocoes = sizeof(remocoes) / sizeof(remocoes[0]);
-
-    for (int i = 0; i < n_remocoes; i++)
-    {
-        printf("Removendo '%s'...\n", remocoes[i]);
-        TARVBMS_retira(remocoes[i]);
-    }
-
-    /* ========== VERIFICAÇÃO PÓS-REMOÇÃO ========== */
-    printf("\n========================================\n");
-    printf("  VERIFICACAO POS-REMOCAO\n");
-    printf("========================================\n\n");
-
-    for (int i = 0; i < n_remocoes; i++)
-    {
-        TFOLHA *resultado = TFOLHA_carrega(remocoes[i]);
-        if (resultado)
-        {
-            printf("  [ERRO] '%s' ainda encontrado apos remocao!\n", remocoes[i]);
-            free(resultado->entidades);
-            free(resultado);
-        }
-        else
-        {
-            printf("  [OK]   '%s' removido com sucesso.\n", remocoes[i]);
-        }
-    }
-
-    /* Verifica que outros ainda existem */
-    char *verificar[] = {"Hugo Weaving", "Forrest Gump"};
-    for (int i = 0; i < 2; i++)
-    {
-        TFOLHA *resultado = TFOLHA_carrega(verificar[i]);
-        if (resultado)
-        {
-            printf("  [OK]   '%s' ainda presente na arvore.\n", verificar[i]);
-            free(resultado->entidades);
-            free(resultado);
-        }
-        else
-        {
-            printf("  [ERRO] '%s' desapareceu da arvore!\n", verificar[i]);
-        }
-    }
-
-    /* ========== ESTADO FINAL ========== */
-    printf("\n========================================\n");
-    printf("  FOLHAS APOS REMOCOES\n");
-    printf("========================================\n\n");
-    TARVBMS_imprime_folhas();
-
-    printf("\n========================================\n");
-    printf("  TESTE CONCLUIDO\n");
-    printf("========================================\n");
 
     return 0;
 }
