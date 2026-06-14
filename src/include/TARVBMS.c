@@ -1002,16 +1002,15 @@ void imprime_no_recursivo(FILE *f, long pos, int nivel, int t)
                 TFOLHA *folha = TFOLHA_le(indice, t);
                 
                 // Indentação da folha
-                for (int j = 0; j < nivel; j++) printf("\t");
-                printf("[Folha %d]: ", indice);
                 
                 if (folha)
                 {
-                    for (int k = 0; k < folha->dados.nchaves; k++)
+                    for (int k = folha->dados.nchaves - 1; k >= 0; k--)
                     {
                         char chave[TAM_NOME];
                         get_chave_entidade(&folha->entidades[k], chave);
-                        printf("{%s} ", chave);
+                        for (int j = 0; j < nivel; j++) printf("\t");
+                        printf("{%s}\n ", chave);
                     }
                     free(folha->entidades);
                     free(folha);
