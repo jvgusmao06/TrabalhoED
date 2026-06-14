@@ -13,33 +13,30 @@
 #define FILHO 0
 #define FOLHA 1
 
-typedef struct{
+typedef struct
+{
     int filho_folha;
     int val;
     int nchaves;
 } TARVBMSDADOS;
 
-typedef struct no{
+typedef struct no
+{
     TARVBMSDADOS infos;
     char **ids; // vetor de char nome[100]
-    union{
+    union
+    {
         long *filhos;
         char **arq_folha; // vetor de char nome_arq[30];
     } dados;
 } TARVBMS;
 
-long TARVBMS_raiz(FILE* arq_index);
-
 void TARVBMS_inicializa(int t); // inicializa o arquivo de indices
 
-void TARVBMS_insere_um(TD *entidade);
-void TARVBMS_preenche_arvore(char* txt);
-//void TARVBMS_insere_um_do_arquivotxt(char *nome, int t);
+void TARVBMS_preenche_arvore(char *txt); // Preenche a árvore apartir de um arquivo txt
 
-void TARVBMS_divisao_folha(FILE *f, long pos_no, int i_filho, int indice_folha);
-void TARVBMS_retira(char *chave);
-int TARVBMS_remove_da_folha(int indice_folha, char *chave, int t);
-void TARVBMS_removezada(FILE *f, long pos_no, char*chave, int t);
+void TARVBMS_insere(TD *entidade); // Insere a entidade
+void TARVBMS_retira(char *chave);  // Retira a entidade com o nome chave
 
 // Impressão
 void TARVBMS_imprime();

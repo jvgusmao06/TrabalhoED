@@ -8,7 +8,7 @@
    Função auxiliar: extrai a chave (nome/título) de uma entidade
    ====================================================== */
 
-static void get_chave_entidade(TD *e, char *chave)
+void get_chave_entidade(TD *e, char *chave)
 {
     if (e->tipo == TIPO_PESSOA)
         strcpy(chave, e->dados.pessoa.nome);
@@ -47,8 +47,7 @@ long TARVBMS_busca_index_invalido(FILE *f)
     fread(&c, sizeof(TConfig), 1, f);
 
     int max_chaves = (c.t * 2) - 1;
-    int tam_no = sizeof(TARVBMSDADOS) + max_chaves * TAM_NOME
-               + (max_chaves + 1) * TAM_ARQ_FOLHA + (max_chaves + 1) * sizeof(long);
+    int tam_no = sizeof(TARVBMSDADOS) + max_chaves * TAM_NOME + (max_chaves + 1) * TAM_ARQ_FOLHA + (max_chaves + 1) * sizeof(long);
 
     long pos = sizeof(TConfig);
     fseek(f, pos, SEEK_SET);
@@ -65,8 +64,8 @@ long TARVBMS_busca_index_invalido(FILE *f)
 }
 
 void TARVBMS_escreve_no(FILE *index, long pos, TARVBMSDADOS dados,
-                         char ids[][TAM_NOME], long *filhos,
-                         char nome_arq[][TAM_ARQ_FOLHA])
+                        char ids[][TAM_NOME], long *filhos,
+                        char nome_arq[][TAM_ARQ_FOLHA])
 {
     TConfig c;
     rewind(index);
@@ -81,8 +80,8 @@ void TARVBMS_escreve_no(FILE *index, long pos, TARVBMSDADOS dados,
 }
 
 long TARVBMS_cria_novo_no(FILE *index, TARVBMSDADOS dados,
-                           char ids[][TAM_NOME], long *filhos,
-                           char nome_arq[][TAM_ARQ_FOLHA])
+                          char ids[][TAM_NOME], long *filhos,
+                          char nome_arq[][TAM_ARQ_FOLHA])
 {
     rewind(index);
     long pos = TARVBMS_busca_index_invalido(index);
@@ -196,7 +195,7 @@ void TARVBMS_divide_no_interno(FILE *index, long pos, long pos_pai, int t)
     infos_pai.nchaves++;
 
     long pos_novo = TARVBMS_cria_novo_no(index, infos_novo, ids_novo,
-                                          filhos_novo, arq_folha_novo);
+                                         filhos_novo, arq_folha_novo);
     filhos_pai[i] = pos_novo;
 
     TARVBMS_escreve_no(index, pos, infos_ant, ids_ant, filhos_ant, arq_folha_ant);
@@ -403,7 +402,7 @@ void TARVBMS_insere_nao_completo(FILE *f, long pos_no, TD *entidade, int t)
    Inserção de uma entidade
    ====================================================== */
 
-void TARVBMS_insere_um(TD *entidade)
+void TARVBMS_insere(TD *entidade)
 {
     if (!entidade)
     {
@@ -467,7 +466,7 @@ void TARVBMS_insere_um(TD *entidade)
             /* folha_0 cheia → split, criando a raiz */
             TARVBMS_divisao_folha(f, -1, 0, 0);
             fclose(f);
-            TARVBMS_insere_um(entidade);
+            TARVBMS_insere(entidade);
             return;
         }
         fclose(f);
@@ -504,7 +503,7 @@ void TARVBMS_insere_um(TD *entidade)
         filhos_np[0] = config.raiz;
 
         long pos_novo_pai = TARVBMS_cria_novo_no(f, infos_novo_pai, ids_np,
-                                                   filhos_np, arq_folha_np);
+                                                 filhos_np, arq_folha_np);
         TARVBMS_divide_no_interno(f, config.raiz, pos_novo_pai, t);
 
         config.raiz = pos_novo_pai;
@@ -512,333 +511,13 @@ void TARVBMS_insere_um(TD *entidade)
         fwrite(&config, sizeof(TConfig), 1, f);
 
         fclose(f);
-        TARVBMS_insere_um(entidade);
+        TARVBMS_insere(entidade);
         return;
     }
 
     TARVBMS_insere_nao_completo(f, config.raiz, entidade, t);
     fclose(f);
 }
-
-void TARVBMS_removezada(FILE *f, long pos_no, char *chave, int t)
-{
-    int max_chaves = (2 * t) - 1;
-    int min_chaves = t - 1;
-    TARVBMSDADOS info;
-    char vet_chaves[max_chaves][TAM_NOME];
-    long filhos[max_chaves + 1];
-    char arq_folha[max_chaves + 1][TAM_ARQ_FOLHA];
-
-    // Le o no interno atual
-    le_no_interno(f, pos_no, &info, vet_chaves, filhos, arq_folha);
-
-    int i = 0;
-    while (i < info.nchaves && strcmp(chave, vet_chaves[i]) >= 0)
-        i++;
-
-    if (info.filho_folha == 1)
-    {
-        // Fihlo e folha
-        int indice_folha_alvo;
-        sscanf(arq_folha[i], "folha_%d.bin", &indice_folha_alvo);
-        int sucesso = TARVBMS_remove_da_folha(indice_folha_alvo, chave, t);
-        // Ve se consegue remover da folha
-        if (sucesso)
-        {
-            TFOLHA *folha_alvo = TFOLHA_le(indice_folha_alvo, t);
-            // O registo foi apagado! Agora precisamos verificar se a folha ta belezinha!
-            if (folha_alvo->dados.nchaves < min_chaves) // Folha ta ruim, precisamos pegar emprestado
-            {
-                printf("A folha %d vai precisar pegar emprestado!\n", indice_folha_alvo);
-                int emprestou = 0;
-                if (i > 0 && !emprestou)
-                {
-
-                    int indice_esq;
-                    sscanf(arq_folha[i - 1], "folha_%d.bin", &indice_esq);
-                    TFOLHA *folha_esq = TFOLHA_le(indice_esq, t);
-                    if (folha_esq->dados.nchaves > min_chaves)
-                    {
-                        printf("Emprestando da folha %d (Esq) para a folha %d (Alvo)\n", indice_esq, indice_folha_alvo);
-                    
-                        // Como vem da esquerda, temos de abrir espaço no início da folha alvo
-                        for (int j = folha_alvo->dados.nchaves; j > 0; j--) {
-                            folha_alvo->entidades[j] = folha_alvo->entidades[j - 1];
-                        }
-                    
-                        // Pega a última entidade da folha da esquerda e coloca no índice 0 do alvo
-                        folha_alvo->entidades[0] = folha_esq->entidades[folha_esq->dados.nchaves - 1];
-                        folha_alvo->dados.nchaves++;
-                        folha_esq->dados.nchaves--;
-                    
-                        // Atualiza a chave separadora no nó interno pai
-                        char nova_chave[TAM_NOME];
-                        if (folha_alvo->entidades[0].tipo == TIPO_PESSOA)
-                            strcpy(nova_chave,folha_alvo->entidades[0].dados.pessoa.nome);
-                        else
-                            strcpy(nova_chave,folha_alvo->entidades[0].dados.filme.titulo);
-                        
-                        strcpy(vet_chaves[i - 1],nova_chave);
-                        
-                        // Guarda no disco
-                        TFOLHA_cria(folha_esq, t, indice_esq);
-                        TFOLHA_cria(folha_alvo, t, indice_folha_alvo);
-                        TARVBMS_escreve_no(f, pos_no, info, vet_chaves, filhos, arq_folha);
-                        
-                        emprestou = 1;
-                        }
-                        if (folha_esq) { free(folha_esq->entidades); free(folha_esq); }
-                }
-
-
-                // FALTA FAZER AQ!!!!! Tentar Empréstimo do irmão da esquerda (i - 1) ou direita (i + 1)
-                // FIZ!
-                if (i < info.nchaves && !emprestou)
-            {
-                int indice_dir;
-                sscanf(arq_folha[i + 1], "folha_%d.bin", &indice_dir);
-                TFOLHA *folha_dir = TFOLHA_le(indice_dir, t);
-
-                if (folha_dir && folha_dir->dados.nchaves > min_chaves)
-                {
-                    printf("Emprestando da folha %d (Dir) para a folha %d (Alvo)\n", indice_dir, indice_folha_alvo);
-                    
-                    // Pega na primeira entidade da folha da direita e coloca no fim do alvo
-                    folha_alvo->entidades[folha_alvo->dados.nchaves] = folha_dir->entidades[0];
-                    folha_alvo->dados.nchaves++;
-                    
-                    // Reorganiza a folha da direita (puxa tudo para o início para tapar o buraco)
-                    for (int j = 0; j < folha_dir->dados.nchaves - 1; j++) {
-                        folha_dir->entidades[j] = folha_dir->entidades[j + 1];
-                    }
-                    folha_dir->dados.nchaves--;
-                    
-                    // Atualiza a chave separadora no nó interno pai
-                    char nova_chave[TAM_NOME];
-                    if (folha_dir->entidades[0].tipo == TIPO_PESSOA)
-                        strcpy(nova_chave, folha_dir->entidades[0].dados.pessoa.nome);
-                    else
-                        strcpy(nova_chave, folha_dir->entidades[0].dados.filme.titulo);
-                    
-                    strcpy(vet_chaves[i], nova_chave);
-                    
-                    // Guarda no disco
-                    TFOLHA_cria(folha_dir, t, indice_dir);
-                    TFOLHA_cria(folha_alvo, t, indice_folha_alvo);
-                    TARVBMS_escreve_no(f, pos_no, info, vet_chaves, filhos, arq_folha);
-                    
-                    emprestou = 1;
-                }
-                if (folha_dir) { free(folha_dir->entidades); free(folha_dir); }
-            }
-            
-
-                // Se não der para emprestar, fazer Fusão com irmão da esquerda ou direita
-                if (!emprestou)
-                {
-                    int pos_fusao = (i > 0) ? (i - 1) : i; 
-                    int indice_esq, indice_dir;
-                    
-                    sscanf(arq_folha[pos_fusao], "folha_%d.bin", &indice_esq);
-                    sscanf(arq_folha[pos_fusao + 1], "folha_%d.bin", &indice_dir);
-                    
-                    printf("Fundindo folhas %d (Esq) e %d (Dir)\n", indice_esq, indice_dir);
-                    
-                    TFOLHA *folha_esq = TFOLHA_le(indice_esq, t);
-                    TFOLHA *folha_dir = TFOLHA_le(indice_dir, t);
-                    
-                    // Juntar as entidades: Move as chaves da folha direita para o final da folha esquerda
-                    for (int j = 0; j < folha_dir->dados.nchaves; j++) {
-                        folha_esq->entidades[folha_esq->dados.nchaves + j] = folha_dir->entidades[j];
-                    }
-                    folha_esq->dados.nchaves += folha_dir->dados.nchaves;
-                    
-                    // Remendar o ponteiro da lista encadeada das folhas
-                    strcpy(folha_esq->dados.prox, folha_dir->dados.prox);
-                    
-                    // Atualizar o Pai: Apaga a chave e o ponteiro para a folha que foi fundida
-                    for (int j = pos_fusao; j < info.nchaves - 1; j++) {
-                        strcpy(vet_chaves[j], vet_chaves[j + 1]);
-                    }
-                    for (int j = pos_fusao + 1; j < info.nchaves; j++) {
-                        strcpy(arq_folha[j], arq_folha[j + 1]);
-                        filhos[j] = filhos[j + 1]; // CORREÇÃO AQUI
-                    }
-                    info.nchaves--;
-                    
-                    // Guarda a folha fundida e o nó interno atualizado
-                    TFOLHA_cria(folha_esq, t, indice_esq);
-                    TARVBMS_escreve_no(f, pos_no, info, vet_chaves, filhos, arq_folha);
-                    
-                    free(folha_esq->entidades); free(folha_esq);
-                    free(folha_dir->entidades); free(folha_dir);
-                }
-            } // Fecho correto do IF do underflow
-            
-            free(folha_alvo->entidades);
-            free(folha_alvo);
-        } // Fecho correto do if(sucesso)
-    } // Fecho do if (info.filho_folha == 1)
-    else
-    {
-        // FIlho e no interno
-        // TARVBMS_retira_recursivo(f, pos_filho, chave, t);
-
-
-        // Chamada Recursiva: Desce na árvore para remover o elemento
-        long pos_filho = filhos[i];
-        TARVBMS_removezada(f, pos_filho, chave, t);
-
-        // Ao voltar da recursão, lemos o filho para ver se ele sofreu underflow
-        TARVBMSDADOS info_filho;
-        char vet_chaves_filho[max_chaves][TAM_NOME];
-        long filhos_filho[max_chaves + 1];
-        char arq_folha_filho[max_chaves + 1][TAM_ARQ_FOLHA];
-
-        le_no_interno(f, pos_filho, &info_filho, vet_chaves_filho, filhos_filho, arq_folha_filho);
-
-        if (info_filho.nchaves < min_chaves && pos_filho != TARVBMS_raiz(f))
-        {
-            printf("No interno em %ld em underflow! Rebalanceando...\n", pos_filho);
-            int emprestou = 0;
-
-            // --- TENTATIVA 1: Emprestar do irmão da ESQUERDA ---
-            if (i > 0 && !emprestou)
-            {
-                long pos_esq = filhos[i - 1];
-                TARVBMSDADOS info_esq;
-                char chaves_esq[max_chaves][TAM_NOME];
-                long filhos_esq[max_chaves + 1];
-                char folhas_esq[max_chaves + 1][TAM_ARQ_FOLHA];
-
-                le_no_interno(f, pos_esq, &info_esq, chaves_esq, filhos_esq, folhas_esq);
-
-                if (info_esq.nchaves > min_chaves)
-                {
-                    // Abre espaço no filho com underflow
-                    for (int j = info_filho.nchaves; j > 0; j--) {
-                        strcpy(vet_chaves_filho[j], vet_chaves_filho[j - 1]);
-                        filhos_filho[j + 1] = filhos_filho[j];
-                        strcpy(arq_folha_filho[j + 1], arq_folha_filho[j]);
-                    }
-                    filhos_filho[1] = filhos_filho[0];
-                    strcpy(arq_folha_filho[1], arq_folha_filho[0]);
-
-                    // A chave do pai desce para o filho
-                    strcpy(vet_chaves_filho[0], vet_chaves[i - 1]);
-                    // O último ponteiro da esquerda vai para o início do filho
-                    filhos_filho[0] = filhos_esq[info_esq.nchaves];
-                    strcpy(arq_folha_filho[0], folhas_esq[info_esq.nchaves]);
-
-                    info_filho.nchaves++;
-
-                    // A última chave da esquerda sobe para o pai
-                    strcpy(vet_chaves[i - 1], chaves_esq[info_esq.nchaves - 1]);
-                    info_esq.nchaves--;
-
-                    // Guarda tudo
-                    TARVBMS_escreve_no(f, pos_esq, info_esq, chaves_esq, filhos_esq, folhas_esq);
-                    TARVBMS_escreve_no(f, pos_filho, info_filho, vet_chaves_filho, filhos_filho, arq_folha_filho);
-                    TARVBMS_escreve_no(f, pos_no, info, vet_chaves, filhos, arq_folha);
-                    emprestou = 1;
-                }
-            }
-
-            // --- TENTATIVA 2: Emprestar do irmão da DIREITA ---
-            if (i < info.nchaves && !emprestou)
-            {
-                long pos_dir = filhos[i + 1];
-                TARVBMSDADOS info_dir;
-                char chaves_dir[max_chaves][TAM_NOME];
-                long filhos_dir[max_chaves + 1];
-                char folhas_dir[max_chaves + 1][TAM_ARQ_FOLHA];
-
-                le_no_interno(f, pos_dir, &info_dir, chaves_dir, filhos_dir, folhas_dir);
-
-                if (info_dir.nchaves > min_chaves)
-                {
-                    // A chave do pai desce para o final do filho com underflow
-                    strcpy(vet_chaves_filho[info_filho.nchaves], vet_chaves[i]);
-                    // O primeiro ponteiro da direita vai para o final do filho
-                    filhos_filho[info_filho.nchaves + 1] = filhos_dir[0];
-                    strcpy(arq_folha_filho[info_filho.nchaves + 1], folhas_dir[0]);
-                    
-                    info_filho.nchaves++;
-
-                    // A primeira chave da direita sobe para o pai
-                    strcpy(vet_chaves[i], chaves_dir[0]);
-
-                    // Puxa os elementos da direita para o início (tapando o buraco)
-                    for (int j = 0; j < info_dir.nchaves - 1; j++) {
-                        strcpy(chaves_dir[j], chaves_dir[j + 1]);
-                        filhos_dir[j] = filhos_dir[j + 1];
-                        strcpy(folhas_dir[j], folhas_dir[j + 1]);
-                    }
-                    filhos_dir[info_dir.nchaves - 1] = filhos_dir[info_dir.nchaves];
-                    strcpy(folhas_dir[info_dir.nchaves - 1], folhas_dir[info_dir.nchaves]);
-                    
-                    info_dir.nchaves--;
-
-                    // Guarda tudo
-                    TARVBMS_escreve_no(f, pos_dir, info_dir, chaves_dir, filhos_dir, folhas_dir);
-                    TARVBMS_escreve_no(f, pos_filho, info_filho, vet_chaves_filho, filhos_filho, arq_folha_filho);
-                    TARVBMS_escreve_no(f, pos_no, info, vet_chaves, filhos, arq_folha);
-                    emprestou = 1;
-                }
-            }
-
-            // --- TENTATIVA 3: FUSÃO (Merge) de Nós Internos ---
-            if (!emprestou)
-            {
-                int pos_fusao = (i > 0) ? (i - 1) : i;
-                long pos_esq = filhos[pos_fusao];
-                long pos_dir = filhos[pos_fusao + 1];
-
-                TARVBMSDADOS info_esq, info_dir;
-                char chaves_esq[max_chaves][TAM_NOME], chaves_dir[max_chaves][TAM_NOME];
-                long filhos_esq[max_chaves + 1], filhos_dir[max_chaves + 1];
-                char folhas_esq[max_chaves + 1][TAM_ARQ_FOLHA], folhas_dir[max_chaves + 1][TAM_ARQ_FOLHA];
-
-                le_no_interno(f, pos_esq, &info_esq, chaves_esq, filhos_esq, folhas_esq);
-                le_no_interno(f, pos_dir, &info_dir, chaves_dir, filhos_dir, folhas_dir);
-
-                // Descer a chave do pai para o nó da esquerda
-                strcpy(chaves_esq[info_esq.nchaves], vet_chaves[pos_fusao]);
-                info_esq.nchaves++;
-
-                // Copiar tudo do nó da direita para o nó da esquerda
-                for (int j = 0; j < info_dir.nchaves; j++) {
-                    strcpy(chaves_esq[info_esq.nchaves + j], chaves_dir[j]);
-                    filhos_esq[info_esq.nchaves + j] = filhos_dir[j];
-                    strcpy(folhas_esq[info_esq.nchaves + j], folhas_dir[j]);
-                }
-                filhos_esq[info_esq.nchaves + info_dir.nchaves] = filhos_dir[info_dir.nchaves];
-                strcpy(folhas_esq[info_esq.nchaves + info_dir.nchaves], folhas_dir[info_dir.nchaves]);
-                
-                info_esq.nchaves += info_dir.nchaves;
-
-                //Atualizar o Pai: Apagar a chave que desceu e o ponteiro da direita
-                for (int j = pos_fusao; j < info.nchaves - 1; j++) {
-                    strcpy(vet_chaves[j], vet_chaves[j + 1]);
-                }
-                for (int j = pos_fusao + 1; j < info.nchaves; j++) {
-                    filhos[j] = filhos[j + 1];
-                }
-                info.nchaves--;
-
-                // Info_dir "morre" logicamente. Podemos marcar como inválido se tiver um campo para isso.
-                info_dir.val = 0;
-
-                // Guarda as alterações
-                TARVBMS_escreve_no(f, pos_esq, info_esq, chaves_esq, filhos_esq, folhas_esq);
-                TARVBMS_escreve_no(f, pos_dir, info_dir, chaves_dir, filhos_dir, folhas_dir);
-                TARVBMS_escreve_no(f, pos_no, info, vet_chaves, filhos, arq_folha);
-            }
-        }
-        
-    }
-}
-
 int TARVBMS_remove_da_folha(int indice_folha, char *chave, int t)
 {
     TFOLHA *folha = TFOLHA_le(indice_folha, t);
@@ -885,6 +564,342 @@ int TARVBMS_remove_da_folha(int indice_folha, char *chave, int t)
     printf("Chave '%s' removida com sucesso da folha %d!\n", chave, indice_folha);
     return 1;
 }
+void TARVBMS_removezada(FILE *f, long pos_no, char *chave, int t)
+{
+    int max_chaves = (2 * t) - 1;
+    int min_chaves = t - 1;
+    TARVBMSDADOS info;
+    char vet_chaves[max_chaves][TAM_NOME];
+    long filhos[max_chaves + 1];
+    char arq_folha[max_chaves + 1][TAM_ARQ_FOLHA];
+
+    // Le o no interno atual
+    le_no_interno(f, pos_no, &info, vet_chaves, filhos, arq_folha);
+
+    int i = 0;
+    while (i < info.nchaves && strcmp(chave, vet_chaves[i]) >= 0)
+        i++;
+
+    if (info.filho_folha == 1)
+    {
+        // Fihlo e folha
+        int indice_folha_alvo;
+        sscanf(arq_folha[i], "folha_%d.bin", &indice_folha_alvo);
+        int sucesso = TARVBMS_remove_da_folha(indice_folha_alvo, chave, t);
+        // Ve se consegue remover da folha
+        if (sucesso)
+        {
+            TFOLHA *folha_alvo = TFOLHA_le(indice_folha_alvo, t);
+            // O registo foi apagado! Agora precisamos verificar se a folha ta belezinha!
+            if (folha_alvo->dados.nchaves < min_chaves) // Folha ta ruim, precisamos pegar emprestado
+            {
+                printf("A folha %d vai precisar pegar emprestado!\n", indice_folha_alvo);
+                int emprestou = 0;
+                if (i > 0 && !emprestou)
+                {
+
+                    int indice_esq;
+                    sscanf(arq_folha[i - 1], "folha_%d.bin", &indice_esq);
+                    TFOLHA *folha_esq = TFOLHA_le(indice_esq, t);
+                    if (folha_esq->dados.nchaves > min_chaves)
+                    {
+                        printf("Emprestando da folha %d (Esq) para a folha %d (Alvo)\n", indice_esq, indice_folha_alvo);
+
+                        // Como vem da esquerda, temos de abrir espaço no início da folha alvo
+                        for (int j = folha_alvo->dados.nchaves; j > 0; j--)
+                        {
+                            folha_alvo->entidades[j] = folha_alvo->entidades[j - 1];
+                        }
+
+                        // Pega a última entidade da folha da esquerda e coloca no índice 0 do alvo
+                        folha_alvo->entidades[0] = folha_esq->entidades[folha_esq->dados.nchaves - 1];
+                        folha_alvo->dados.nchaves++;
+                        folha_esq->dados.nchaves--;
+
+                        // Atualiza a chave separadora no nó interno pai
+                        char nova_chave[TAM_NOME];
+                        if (folha_alvo->entidades[0].tipo == TIPO_PESSOA)
+                            strcpy(nova_chave, folha_alvo->entidades[0].dados.pessoa.nome);
+                        else
+                            strcpy(nova_chave, folha_alvo->entidades[0].dados.filme.titulo);
+
+                        strcpy(vet_chaves[i - 1], nova_chave);
+
+                        // Guarda no disco
+                        TFOLHA_cria(folha_esq, t, indice_esq);
+                        TFOLHA_cria(folha_alvo, t, indice_folha_alvo);
+                        TARVBMS_escreve_no(f, pos_no, info, vet_chaves, filhos, arq_folha);
+
+                        emprestou = 1;
+                    }
+                    if (folha_esq)
+                    {
+                        free(folha_esq->entidades);
+                        free(folha_esq);
+                    }
+                }
+
+                // FALTA FAZER AQ!!!!! Tentar Empréstimo do irmão da esquerda (i - 1) ou direita (i + 1)
+                // FIZ!
+                if (i < info.nchaves && !emprestou)
+                {
+                    int indice_dir;
+                    sscanf(arq_folha[i + 1], "folha_%d.bin", &indice_dir);
+                    TFOLHA *folha_dir = TFOLHA_le(indice_dir, t);
+
+                    if (folha_dir && folha_dir->dados.nchaves > min_chaves)
+                    {
+                        printf("Emprestando da folha %d (Dir) para a folha %d (Alvo)\n", indice_dir, indice_folha_alvo);
+
+                        // Pega na primeira entidade da folha da direita e coloca no fim do alvo
+                        folha_alvo->entidades[folha_alvo->dados.nchaves] = folha_dir->entidades[0];
+                        folha_alvo->dados.nchaves++;
+
+                        // Reorganiza a folha da direita (puxa tudo para o início para tapar o buraco)
+                        for (int j = 0; j < folha_dir->dados.nchaves - 1; j++)
+                        {
+                            folha_dir->entidades[j] = folha_dir->entidades[j + 1];
+                        }
+                        folha_dir->dados.nchaves--;
+
+                        // Atualiza a chave separadora no nó interno pai
+                        char nova_chave[TAM_NOME];
+                        if (folha_dir->entidades[0].tipo == TIPO_PESSOA)
+                            strcpy(nova_chave, folha_dir->entidades[0].dados.pessoa.nome);
+                        else
+                            strcpy(nova_chave, folha_dir->entidades[0].dados.filme.titulo);
+
+                        strcpy(vet_chaves[i], nova_chave);
+
+                        // Guarda no disco
+                        TFOLHA_cria(folha_dir, t, indice_dir);
+                        TFOLHA_cria(folha_alvo, t, indice_folha_alvo);
+                        TARVBMS_escreve_no(f, pos_no, info, vet_chaves, filhos, arq_folha);
+
+                        emprestou = 1;
+                    }
+                    if (folha_dir)
+                    {
+                        free(folha_dir->entidades);
+                        free(folha_dir);
+                    }
+                }
+
+                // Se não der para emprestar, fazer Fusão com irmão da esquerda ou direita
+                if (!emprestou)
+                {
+                    int pos_fusao = (i > 0) ? (i - 1) : i;
+                    int indice_esq, indice_dir;
+
+                    sscanf(arq_folha[pos_fusao], "folha_%d.bin", &indice_esq);
+                    sscanf(arq_folha[pos_fusao + 1], "folha_%d.bin", &indice_dir);
+
+                    printf("Fundindo folhas %d (Esq) e %d (Dir)\n", indice_esq, indice_dir);
+
+                    TFOLHA *folha_esq = TFOLHA_le(indice_esq, t);
+                    TFOLHA *folha_dir = TFOLHA_le(indice_dir, t);
+
+                    // Juntar as entidades: Move as chaves da folha direita para o final da folha esquerda
+                    for (int j = 0; j < folha_dir->dados.nchaves; j++)
+                    {
+                        folha_esq->entidades[folha_esq->dados.nchaves + j] = folha_dir->entidades[j];
+                    }
+                    folha_esq->dados.nchaves += folha_dir->dados.nchaves;
+
+                    // Remendar o ponteiro da lista encadeada das folhas
+                    strcpy(folha_esq->dados.prox, folha_dir->dados.prox);
+
+                    // Atualizar o Pai: Apaga a chave e o ponteiro para a folha que foi fundida
+                    for (int j = pos_fusao; j < info.nchaves - 1; j++)
+                    {
+                        strcpy(vet_chaves[j], vet_chaves[j + 1]);
+                    }
+                    for (int j = pos_fusao + 1; j < info.nchaves; j++)
+                    {
+                        strcpy(arq_folha[j], arq_folha[j + 1]);
+                        filhos[j] = filhos[j + 1]; // CORREÇÃO AQUI
+                    }
+                    info.nchaves--;
+
+                    // Guarda a folha fundida e o nó interno atualizado
+                    TFOLHA_cria(folha_esq, t, indice_esq);
+                    TARVBMS_escreve_no(f, pos_no, info, vet_chaves, filhos, arq_folha);
+
+                    free(folha_esq->entidades);
+                    free(folha_esq);
+                    free(folha_dir->entidades);
+                    free(folha_dir);
+                }
+            } // Fecho correto do IF do underflow
+
+            free(folha_alvo->entidades);
+            free(folha_alvo);
+        } // Fecho correto do if(sucesso)
+    } // Fecho do if (info.filho_folha == 1)
+    else
+    {
+        // FIlho e no interno
+        // TARVBMS_retira_recursivo(f, pos_filho, chave, t);
+
+        // Chamada Recursiva: Desce na árvore para remover o elemento
+        long pos_filho = filhos[i];
+        TARVBMS_removezada(f, pos_filho, chave, t);
+
+        // Ao voltar da recursão, lemos o filho para ver se ele sofreu underflow
+        TARVBMSDADOS info_filho;
+        char vet_chaves_filho[max_chaves][TAM_NOME];
+        long filhos_filho[max_chaves + 1];
+        char arq_folha_filho[max_chaves + 1][TAM_ARQ_FOLHA];
+
+        le_no_interno(f, pos_filho, &info_filho, vet_chaves_filho, filhos_filho, arq_folha_filho);
+
+        if (info_filho.nchaves < min_chaves && pos_filho != TARVBMS_raiz(f))
+        {
+            printf("No interno em %ld em underflow! Rebalanceando...\n", pos_filho);
+            int emprestou = 0;
+
+            // --- TENTATIVA 1: Emprestar do irmão da ESQUERDA ---
+            if (i > 0 && !emprestou)
+            {
+                long pos_esq = filhos[i - 1];
+                TARVBMSDADOS info_esq;
+                char chaves_esq[max_chaves][TAM_NOME];
+                long filhos_esq[max_chaves + 1];
+                char folhas_esq[max_chaves + 1][TAM_ARQ_FOLHA];
+
+                le_no_interno(f, pos_esq, &info_esq, chaves_esq, filhos_esq, folhas_esq);
+
+                if (info_esq.nchaves > min_chaves)
+                {
+                    // Abre espaço no filho com underflow
+                    for (int j = info_filho.nchaves; j > 0; j--)
+                    {
+                        strcpy(vet_chaves_filho[j], vet_chaves_filho[j - 1]);
+                        filhos_filho[j + 1] = filhos_filho[j];
+                        strcpy(arq_folha_filho[j + 1], arq_folha_filho[j]);
+                    }
+                    filhos_filho[1] = filhos_filho[0];
+                    strcpy(arq_folha_filho[1], arq_folha_filho[0]);
+
+                    // A chave do pai desce para o filho
+                    strcpy(vet_chaves_filho[0], vet_chaves[i - 1]);
+                    // O último ponteiro da esquerda vai para o início do filho
+                    filhos_filho[0] = filhos_esq[info_esq.nchaves];
+                    strcpy(arq_folha_filho[0], folhas_esq[info_esq.nchaves]);
+
+                    info_filho.nchaves++;
+
+                    // A última chave da esquerda sobe para o pai
+                    strcpy(vet_chaves[i - 1], chaves_esq[info_esq.nchaves - 1]);
+                    info_esq.nchaves--;
+
+                    // Guarda tudo
+                    TARVBMS_escreve_no(f, pos_esq, info_esq, chaves_esq, filhos_esq, folhas_esq);
+                    TARVBMS_escreve_no(f, pos_filho, info_filho, vet_chaves_filho, filhos_filho, arq_folha_filho);
+                    TARVBMS_escreve_no(f, pos_no, info, vet_chaves, filhos, arq_folha);
+                    emprestou = 1;
+                }
+            }
+
+            // --- TENTATIVA 2: Emprestar do irmão da DIREITA ---
+            if (i < info.nchaves && !emprestou)
+            {
+                long pos_dir = filhos[i + 1];
+                TARVBMSDADOS info_dir;
+                char chaves_dir[max_chaves][TAM_NOME];
+                long filhos_dir[max_chaves + 1];
+                char folhas_dir[max_chaves + 1][TAM_ARQ_FOLHA];
+
+                le_no_interno(f, pos_dir, &info_dir, chaves_dir, filhos_dir, folhas_dir);
+
+                if (info_dir.nchaves > min_chaves)
+                {
+                    // A chave do pai desce para o final do filho com underflow
+                    strcpy(vet_chaves_filho[info_filho.nchaves], vet_chaves[i]);
+                    // O primeiro ponteiro da direita vai para o final do filho
+                    filhos_filho[info_filho.nchaves + 1] = filhos_dir[0];
+                    strcpy(arq_folha_filho[info_filho.nchaves + 1], folhas_dir[0]);
+
+                    info_filho.nchaves++;
+
+                    // A primeira chave da direita sobe para o pai
+                    strcpy(vet_chaves[i], chaves_dir[0]);
+
+                    // Puxa os elementos da direita para o início (tapando o buraco)
+                    for (int j = 0; j < info_dir.nchaves - 1; j++)
+                    {
+                        strcpy(chaves_dir[j], chaves_dir[j + 1]);
+                        filhos_dir[j] = filhos_dir[j + 1];
+                        strcpy(folhas_dir[j], folhas_dir[j + 1]);
+                    }
+                    filhos_dir[info_dir.nchaves - 1] = filhos_dir[info_dir.nchaves];
+                    strcpy(folhas_dir[info_dir.nchaves - 1], folhas_dir[info_dir.nchaves]);
+
+                    info_dir.nchaves--;
+
+                    // Guarda tudo
+                    TARVBMS_escreve_no(f, pos_dir, info_dir, chaves_dir, filhos_dir, folhas_dir);
+                    TARVBMS_escreve_no(f, pos_filho, info_filho, vet_chaves_filho, filhos_filho, arq_folha_filho);
+                    TARVBMS_escreve_no(f, pos_no, info, vet_chaves, filhos, arq_folha);
+                    emprestou = 1;
+                }
+            }
+
+            // --- TENTATIVA 3: FUSÃO (Merge) de Nós Internos ---
+            if (!emprestou)
+            {
+                int pos_fusao = (i > 0) ? (i - 1) : i;
+                long pos_esq = filhos[pos_fusao];
+                long pos_dir = filhos[pos_fusao + 1];
+
+                TARVBMSDADOS info_esq, info_dir;
+                char chaves_esq[max_chaves][TAM_NOME], chaves_dir[max_chaves][TAM_NOME];
+                long filhos_esq[max_chaves + 1], filhos_dir[max_chaves + 1];
+                char folhas_esq[max_chaves + 1][TAM_ARQ_FOLHA], folhas_dir[max_chaves + 1][TAM_ARQ_FOLHA];
+
+                le_no_interno(f, pos_esq, &info_esq, chaves_esq, filhos_esq, folhas_esq);
+                le_no_interno(f, pos_dir, &info_dir, chaves_dir, filhos_dir, folhas_dir);
+
+                // Descer a chave do pai para o nó da esquerda
+                strcpy(chaves_esq[info_esq.nchaves], vet_chaves[pos_fusao]);
+                info_esq.nchaves++;
+
+                // Copiar tudo do nó da direita para o nó da esquerda
+                for (int j = 0; j < info_dir.nchaves; j++)
+                {
+                    strcpy(chaves_esq[info_esq.nchaves + j], chaves_dir[j]);
+                    filhos_esq[info_esq.nchaves + j] = filhos_dir[j];
+                    strcpy(folhas_esq[info_esq.nchaves + j], folhas_dir[j]);
+                }
+                filhos_esq[info_esq.nchaves + info_dir.nchaves] = filhos_dir[info_dir.nchaves];
+                strcpy(folhas_esq[info_esq.nchaves + info_dir.nchaves], folhas_dir[info_dir.nchaves]);
+
+                info_esq.nchaves += info_dir.nchaves;
+
+                // Atualizar o Pai: Apagar a chave que desceu e o ponteiro da direita
+                for (int j = pos_fusao; j < info.nchaves - 1; j++)
+                {
+                    strcpy(vet_chaves[j], vet_chaves[j + 1]);
+                }
+                for (int j = pos_fusao + 1; j < info.nchaves; j++)
+                {
+                    filhos[j] = filhos[j + 1];
+                }
+                info.nchaves--;
+
+                // Info_dir "morre" logicamente. Podemos marcar como inválido se tiver um campo para isso.
+                info_dir.val = 0;
+
+                // Guarda as alterações
+                TARVBMS_escreve_no(f, pos_esq, info_esq, chaves_esq, filhos_esq, folhas_esq);
+                TARVBMS_escreve_no(f, pos_dir, info_dir, chaves_dir, filhos_dir, folhas_dir);
+                TARVBMS_escreve_no(f, pos_no, info, vet_chaves, filhos, arq_folha);
+            }
+        }
+    }
+}
+
+
 
 void TARVBMS_retira(char *chave)
 {
@@ -918,29 +933,32 @@ void TARVBMS_retira(char *chave)
     char ids_raiz[max_chaves][TAM_NOME];
     long filhos_raiz[max_chaves + 1];
     char arq_folha_raiz[max_chaves + 1][TAM_ARQ_FOLHA];
-    
+
     le_no_interno(f, config.raiz, &info_raiz, ids_raiz, filhos_raiz, arq_folha_raiz);
     // Se a raiz fico vazia
     if (info_raiz.nchaves == 0)
     {
-        if (info_raiz.filho_folha == 0) {
+        if (info_raiz.filho_folha == 0)
+        {
             // A raiz apontava para nós internos. O filho resultante da fusão vira a nova raiz!
             config.raiz = filhos_raiz[0];
             printf(">>> A raiz fundiu e a arvore encolheu de altura! Nova raiz em: %ld <<<\n", config.raiz);
-        } else {
+        }
+        else
+        {
             // A raiz apontava diretamente para folhas, e agora só sobrou uma folha na árvore.
             // A árvore volta ao seu estado inicial (sem nós internos)!
             config.raiz = -1;
             printf(">>> A arvore encolheu tanto que agora so possui a folha base! <<<\n");
         }
-        
+
         fseek(f, 0, SEEK_SET);
         fwrite(&config, sizeof(TConfig), 1, f);
     }
     fclose(f);
 }
 
-static void imprime_no_recursivo(FILE *f, long pos, int nivel, int t)
+void imprime_no_recursivo(FILE *f, long pos, int nivel, int t)
 {
     int max_chaves = (2 * t) - 1;
     TARVBMSDADOS info;
@@ -948,45 +966,58 @@ static void imprime_no_recursivo(FILE *f, long pos, int nivel, int t)
     long filhos[max_chaves + 1];
     char arq_folha[max_chaves + 1][TAM_ARQ_FOLHA];
 
+    // Lê o nó atual do arquivo index.bin
     le_no_interno(f, pos, &info, ids, filhos, arq_folha);
 
-    for (int n = 0; n < nivel; n++) printf("  ");
-    printf("[No interno | nchaves=%d | folha=%d] ", info.nchaves, info.filho_folha);
-    for (int k = 0; k < info.nchaves; k++)
-        printf("{%s} ", ids[k]);
-    printf("\n");
-
-    if (info.filho_folha)
+    // SE FOR NÓ INTERNO (Não é folha)
+    if (info.filho_folha == 0)
     {
-        for (int k = 0; k <= info.nchaves; k++)
+        // 1. Recurso: Chama o filho da direita (o último filho)
+        imprime_no_recursivo(f, filhos[info.nchaves], nivel + 1, t);
+
+        // 2. Loop da direita para a esquerda
+        for (int i = info.nchaves - 1; i >= 0; i--)
         {
-            int indice;
-            if (sscanf(arq_folha[k], "folha_%d.bin", &indice) != 1)
-                continue;
-            TFOLHA *folha = TFOLHA_le(indice, t);
-            for (int n = 0; n < nivel + 1; n++) printf("  ");
-            printf("[%s | nchaves=%d] ", arq_folha[k],
-                   folha ? folha->dados.nchaves : 0);
-            if (folha)
-            {
-                for (int j = 0; j < folha->dados.nchaves; j++)
-                {
-                    char chave[TAM_NOME];
-                    get_chave_entidade(&folha->entidades[j], chave);
-                    printf("{%s} ", chave);
-                }
-                free(folha->entidades);
-                free(folha);
-            }
-            printf("\n");
+            // Indentação (tabs)
+            for (int j = 0; j < nivel; j++) printf("\t");
+            
+            // Imprime a chave do nó interno
+            printf("{%s}\n", ids[i]);
+            
+            // 3. Recurso: Chama o filho da esquerda correspondente a essa chave
+            imprime_no_recursivo(f, filhos[i], nivel + 1, t);
         }
     }
+    // SE FOR FOLHA
     else
     {
-        for (int k = 0; k <= info.nchaves; k++)
+        // Imprime as folhas (aqui não descemos mais, pois folha não tem "filhos" na árvore)
+        // Imprimimos da direita para a esquerda também para manter o visual
+        for (int i = info.nchaves; i >= 0; i--) 
         {
-            if (filhos[k] != -1)
-                imprime_no_recursivo(f, filhos[k], nivel + 1, t);
+            int indice;
+            // Verifica se o arquivo é válido
+            if (sscanf(arq_folha[i], "folha_%d.bin", &indice) == 1)
+            {
+                TFOLHA *folha = TFOLHA_le(indice, t);
+                
+                // Indentação da folha
+                for (int j = 0; j < nivel; j++) printf("\t");
+                printf("[Folha %d]: ", indice);
+                
+                if (folha)
+                {
+                    for (int k = 0; k < folha->dados.nchaves; k++)
+                    {
+                        char chave[TAM_NOME];
+                        get_chave_entidade(&folha->entidades[k], chave);
+                        printf("{%s} ", chave);
+                    }
+                    free(folha->entidades);
+                    free(folha);
+                }
+                printf("\n");
+            }
         }
     }
 }
@@ -1090,7 +1121,8 @@ void TARVBMS_imprime_folhas()
     while (1)
     {
         TFOLHA *folha = TFOLHA_le(indice_folha, t);
-        if (!folha) break;
+        if (!folha)
+            break;
 
         printf("--- folha_%d.bin (nchaves=%d, prox=%s) ---\n",
                indice_folha, folha->dados.nchaves, folha->dados.prox);
@@ -1110,7 +1142,8 @@ void TARVBMS_imprime_folhas()
         free(folha->entidades);
         free(folha);
 
-        if (strcmp(prox, "-1") == 0) break;
+        if (strcmp(prox, "-1") == 0)
+            break;
         sscanf(prox, "folha_%d.bin", &indice_folha);
     }
     printf("\nTotal de entradas nas folhas: %d\n", total);
@@ -1158,20 +1191,23 @@ void TARVBMS_preenche_arvore(char *txt)
         strcpy(copia, linha);
 
         char *token = strtok(copia, "|");
-        if (!token) continue;
+        if (!token)
+            continue;
         trim(token);
 
         if (strcmp(token, "Movie") == 0)
         {
             token = strtok(NULL, "|");
-            if (!token) continue;
+            if (!token)
+                continue;
             trim(token);
             char titulo[TAM_NOME];
             strncpy(titulo, token, sizeof(titulo) - 1);
             titulo[sizeof(titulo) - 1] = '\0';
 
             token = strtok(NULL, "|");
-            if (!token) continue;
+            if (!token)
+                continue;
             trim(token);
             int ano = (int)strtol(token, NULL, 10);
 
@@ -1193,20 +1229,22 @@ void TARVBMS_preenche_arvore(char *txt)
             entidade.dados.filme.ano = ano;
             strcpy(entidade.dados.filme.titulo, titulo);
             strcpy(entidade.dados.filme.sub, sub);
-            TARVBMS_insere_um(&entidade);
+            TARVBMS_insere(&entidade);
             count++;
         }
         else if (strcmp(token, "Person") == 0)
         {
             token = strtok(NULL, "|");
-            if (!token) continue;
+            if (!token)
+                continue;
             trim(token);
             char nome[TAM_NOME];
             strncpy(nome, token, sizeof(nome) - 1);
             nome[sizeof(nome) - 1] = '\0';
 
             token = strtok(NULL, "|");
-            if (!token) continue;
+            if (!token)
+                continue;
             trim(token);
             int ano = (int)strtol(token, NULL, 10);
 
@@ -1214,7 +1252,7 @@ void TARVBMS_preenche_arvore(char *txt)
             entidade.tipo = TIPO_PESSOA;
             strcpy(entidade.dados.pessoa.nome, nome);
             entidade.dados.pessoa.ano = ano;
-            TARVBMS_insere_um(&entidade);
+            TARVBMS_insere(&entidade);
             count++;
         }
     }

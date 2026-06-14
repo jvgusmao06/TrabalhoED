@@ -128,7 +128,8 @@ TFOLHA *TFOLHA_carrega(char *nome)
 
     /* Lê a folha e procura a chave */
     TFOLHA *folha = TFOLHA_le(indice_folha, c.t);
-    if (!folha) return NULL;
+    if (!folha)
+        return NULL;
 
     for (int i = 0; i < folha->dados.nchaves; i++)
     {
@@ -162,7 +163,7 @@ void TFOLHA_insere(TD *entidade, int t, int index)
         printf("A folha ../dados/folha_%d.bin não existe. Criando uma folha.\n", index);
 
         folha = TFOLHA_aloca(t);
-        
+
         folha->entidades[0] = *entidade;
 
         TFOLHA_cria(folha, t, index);

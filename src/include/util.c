@@ -28,13 +28,16 @@ int compara_entidades_por_nome(TD *e1, TD *e2)
     return strcmp(nome1, nome2);
 }
 
-int compara_nomes_com_entidades(char *nome, TD *entidade){
+int compara_nomes_com_entidades(char *nome, TD *entidade)
+{
     char nome2[100];
 
-    if(entidade->tipo == TIPO_PESSOA){
+    if (entidade->tipo == TIPO_PESSOA)
+    {
         strcpy(nome2, entidade->dados.pessoa.nome);
     }
-    else{
+    else
+    {
         strcpy(nome2, entidade->dados.filme.titulo);
     }
 
@@ -48,7 +51,7 @@ void le_no_interno(FILE *f, long posicao, TARVBMSDADOS *infos,
     rewind(f);
     fread(&cfg, sizeof(TConfig), 1, f);
     int max_chaves = (2 * cfg.t) - 1;
-    
+
     fseek(f, posicao, SEEK_SET);
     fread(infos, sizeof(TARVBMSDADOS), 1, f);
     fread(ids, TAM_NOME, max_chaves, f);
@@ -60,7 +63,7 @@ void trim(char* str){
 
     int inicio = 0;
     while(str[inicio] == ' ') inicio++;
-    
+
 
     int i = 0;
     while(str[inicio + i] != '\0'){
