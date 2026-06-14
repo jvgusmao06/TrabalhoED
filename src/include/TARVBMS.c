@@ -899,8 +899,6 @@ void TARVBMS_removezada(FILE *f, long pos_no, char *chave, int t)
     }
 }
 
-
-
 void TARVBMS_retira(char *chave)
 {
     FILE *f = fopen("../dados/index.bin", "rb+");
@@ -958,6 +956,28 @@ void TARVBMS_retira(char *chave)
     fclose(f);
 }
 
+void imprime_folha(FILE *f, char *nome_arq, int nivel, int t)
+{
+    int indice;
+    if (sscanf(nome_arq, "folha_%d.bin", &indice) != 1)
+        return;
+
+    TFOLHA *folha = TFOLHA_le(indice, t);
+    if (!folha)
+        return;
+
+    for (int k = folha->dados.nchaves - 1; k >= 0; k--)
+    {
+        char chave[TAM_NOME];
+        get_chave_entidade(&folha->entidades[k], chave);
+        for (int j = 0; j < nivel; j++) printf("\t\t");
+        printf("{%s}\n", chave);
+    }
+
+    free(folha->entidades);
+    free(folha);
+}
+
 void imprime_no_recursivo(FILE *f, long pos, int nivel, int t)
 {
     int max_chaves = (2 * t) - 1;
@@ -966,57 +986,30 @@ void imprime_no_recursivo(FILE *f, long pos, int nivel, int t)
     long filhos[max_chaves + 1];
     char arq_folha[max_chaves + 1][TAM_ARQ_FOLHA];
 
-    // Lê o nó atual do arquivo index.bin
     le_no_interno(f, pos, &info, ids, filhos, arq_folha);
 
-    // SE FOR NÓ INTERNO (Não é folha)
     if (info.filho_folha == 0)
     {
-        // 1. Recurso: Chama o filho da direita (o último filho)
         imprime_no_recursivo(f, filhos[info.nchaves], nivel + 1, t);
 
-        // 2. Loop da direita para a esquerda
         for (int i = info.nchaves - 1; i >= 0; i--)
         {
-            // Indentação (tabs)
-            for (int j = 0; j < nivel; j++) printf("\t");
-            
-            // Imprime a chave do nó interno
+            for (int j = 0; j < nivel; j++) printf("\t\t");
             printf("{%s}\n", ids[i]);
-            
-            // 3. Recurso: Chama o filho da esquerda correspondente a essa chave
+
             imprime_no_recursivo(f, filhos[i], nivel + 1, t);
         }
     }
-    // SE FOR FOLHA
     else
     {
-        // Imprime as folhas (aqui não descemos mais, pois folha não tem "filhos" na árvore)
-        // Imprimimos da direita para a esquerda também para manter o visual
-        for (int i = info.nchaves; i >= 0; i--) 
+        imprime_folha(f, arq_folha[info.nchaves], nivel + 1, t);
+
+        for (int i = info.nchaves - 1; i >= 0; i--)
         {
-            int indice;
-            // Verifica se o arquivo é válido
-            if (sscanf(arq_folha[i], "folha_%d.bin", &indice) == 1)
-            {
-                TFOLHA *folha = TFOLHA_le(indice, t);
-                
-                // Indentação da folha
-                
-                if (folha)
-                {
-                    for (int k = folha->dados.nchaves - 1; k >= 0; k--)
-                    {
-                        char chave[TAM_NOME];
-                        get_chave_entidade(&folha->entidades[k], chave);
-                        for (int j = 0; j < nivel; j++) printf("\t");
-                        printf("{%s}\n ", chave);
-                    }
-                    free(folha->entidades);
-                    free(folha);
-                }
-                printf("\n");
-            }
+            for (int j = 0; j < nivel; j++) printf("\t\t");
+            printf("{%s}\n", ids[i]);
+
+            imprime_folha(f, arq_folha[i], nivel + 1, t);
         }
     }
 }

@@ -24,7 +24,6 @@ int main()
     insere_pessoa("Jini goat",10);
     insere_pessoa("Kini goat",10);
     insere_pessoa("Lini goat",10);
-    TARVBMS_imprime();
     TARVBMS_retira("Laurence Fishburne");
     TARVBMS_retira("Jini goat");
     TARVBMS_retira("Lana Wachowski");
@@ -41,5 +40,6 @@ int main()
 
     printf("\n\n\n\n\n");
     TARVBMS_imprime();
+    //TARVBMS_imprime_folhas();
     return 0;
 }
