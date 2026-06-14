@@ -910,8 +910,33 @@ void TARVBMS_retira(char *chave)
         fclose(f);
         return;
     }
+
     TARVBMS_removezada(f, config.raiz, chave, t);
 
+    int max_chaves = (2 * t) - 1;
+    TARVBMSDADOS info_raiz;
+    char ids_raiz[max_chaves][TAM_NOME];
+    long filhos_raiz[max_chaves + 1];
+    char arq_folha_raiz[max_chaves + 1][TAM_ARQ_FOLHA];
+    
+    le_no_interno(f, config.raiz, &info_raiz, ids_raiz, filhos_raiz, arq_folha_raiz);
+    // Se a raiz fico vazia
+    if (info_raiz.nchaves == 0)
+    {
+        if (info_raiz.filho_folha == 0) {
+            // A raiz apontava para nós internos. O filho resultante da fusão vira a nova raiz!
+            config.raiz = filhos_raiz[0];
+            printf(">>> A raiz fundiu e a arvore encolheu de altura! Nova raiz em: %ld <<<\n", config.raiz);
+        } else {
+            // A raiz apontava diretamente para folhas, e agora só sobrou uma folha na árvore.
+            // A árvore volta ao seu estado inicial (sem nós internos)!
+            config.raiz = -1;
+            printf(">>> A arvore encolheu tanto que agora so possui a folha base! <<<\n");
+        }
+        
+        fseek(f, 0, SEEK_SET);
+        fwrite(&config, sizeof(TConfig), 1, f);
+    }
     fclose(f);
 }
 
