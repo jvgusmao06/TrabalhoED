@@ -16,6 +16,13 @@
 
 typedef struct
 {
+    int t;
+    long raiz;
+    int indice;
+    int preenchido;
+} TConfig;
+typedef struct
+{
     int filho_folha;
     int val;
     int nchaves;
@@ -38,6 +45,8 @@ void TARVBMS_preenche_arvore(char *txt); // Preenche a árvore apartir de um arq
 
 void TARVBMS_insere(TD *entidade); // Insere a entidade
 void TARVBMS_retira(char *chave);  // Retira a entidade com o nome chave
+void le_no_interno(FILE *f, long posicao, TARVBMSDADOS *infos, char (*ids)[TAM_NOME], long *filhos, char (*arq_folha)[TAM_ARQ_FOLHA]);
+int compara_entidades_por_nome(TD *e1, TD *e2);
 
 // Impressão
 void TARVBMS_imprime();
