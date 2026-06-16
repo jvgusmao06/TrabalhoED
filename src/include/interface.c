@@ -1,0 +1,91 @@
+#include "../header/interface.h"
+#include "../header/TD.h"
+#include "../header/TARVBMS.h"
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+
+int escolhe_t()
+{
+    int t;
+    printf("Digite o t da árvore:\n");
+    scanf("%d", &t);
+    if(t < 2) t = 2;
+    return t;
+}
+
+void insere_entidades()
+{
+    while (1)
+    {
+        int tipo;
+        printf("================================================================================================================================================\n");
+        printf("Digite o tipo da sua entidade:\n1: para pessoa\n2: para filme\n-1: para parar de inserir\n");
+        scanf("%d", &tipo);
+        if (tipo == -1)
+        {
+            return;
+        }
+        else if (tipo == 1)
+        {
+
+            TD *entidade = (TD *)malloc(sizeof(TD));
+            entidade->tipo = TIPO_PESSOA;
+            char nome[TAM_NOME];
+            int ano;
+            printf("Digite o nome da pessoa:\n");
+            scanf(" %99[^\n]", nome);
+            printf("Digite o ano de nascimento\n");
+            scanf("%d", &ano);
+
+            strcpy(entidade->dados.pessoa.nome, nome);
+            entidade->dados.pessoa.ano = ano;
+            TARVBMS_insere(entidade);
+            free(entidade);
+        }
+        else if (tipo == 2)
+        {
+            TD *entidade = (TD *)malloc(sizeof(TD));
+            entidade->tipo = TIPO_FILME;
+            char nome[TAM_NOME], sub[TAM_SUB];
+            int ano;
+            printf("Digite o nome do filme:\n");
+            scanf(" %99[^\n]", nome);
+            printf("Digite o ano de lançamento\n");
+            scanf("%d", &ano);
+            printf("Digite o subtitulo do filme:\n");
+            scanf(" %199[^\n]", sub);
+
+            strcpy(entidade->dados.filme.titulo, nome);
+            entidade->dados.filme.ano = ano;
+            strcpy(entidade->dados.filme.sub, sub);
+            TARVBMS_insere(entidade);
+            free(entidade);
+        }
+        else{
+            printf("Tipo invalido.\n");
+        }
+    }
+}
+
+
+void remove_entidades()
+{
+    char nome[TAM_NOME];
+    while (1)
+    {
+        printf("================================================================================================================================================\n");
+        printf("Digite o nome ou o título de uma entidade para remover ou -1 para parar de remover\n");
+        scanf(" %99[^\n]", nome);
+
+        if(strcmp(nome, "-1") == 0){
+            return;
+        }
+        TARVBMS_retira(nome);
+    }
+}
+
+void questoes()
+{
+    return;
+}

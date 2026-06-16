@@ -32,6 +32,7 @@ void TARVBMS_inicializa(int t)
     temp.t = t;
     temp.raiz = -1;
     temp.indice = 0;
+    temp.preenchido = 0;
     fwrite(&temp, sizeof(TConfig), 1, f);
     fclose(f);
 }
@@ -970,7 +971,8 @@ void imprime_folha(FILE *f, char *nome_arq, int nivel, int t)
     {
         char chave[TAM_NOME];
         get_chave_entidade(&folha->entidades[k], chave);
-        for (int j = 0; j < nivel; j++) printf("\t\t");
+        for (int j = 0; j < nivel; j++)
+            printf("\t\t");
         printf("{%s}\n", chave);
     }
 
@@ -994,7 +996,8 @@ void imprime_no_recursivo(FILE *f, long pos, int nivel, int t)
 
         for (int i = info.nchaves - 1; i >= 0; i--)
         {
-            for (int j = 0; j < nivel; j++) printf("\t\t");
+            for (int j = 0; j < nivel; j++)
+                printf("\t\t");
             printf("{%s}\n", ids[i]);
 
             imprime_no_recursivo(f, filhos[i], nivel + 1, t);
@@ -1006,7 +1009,8 @@ void imprime_no_recursivo(FILE *f, long pos, int nivel, int t)
 
         for (int i = info.nchaves - 1; i >= 0; i--)
         {
-            for (int j = 0; j < nivel; j++) printf("\t\t");
+            for (int j = 0; j < nivel; j++)
+                printf("\t\t");
             printf("{%s}\n", ids[i]);
 
             imprime_folha(f, arq_folha[i], nivel + 1, t);
@@ -1154,13 +1158,14 @@ void TARVBMS_preenche_arvore(char *txt)
         printf("Erro ao abrir index.bin\n");
         exit(1);
     }
-    fseek(fteste, 0, SEEK_END);
-    if (ftell(fteste) > (long)sizeof(TConfig))
+
+    TConfig c;
+    fread(&c, sizeof(TConfig), 1, fteste);
+    fclose(fteste);
+    if (c.preenchido)
     {
-        fclose(fteste);
         return;
     }
-    fclose(fteste);
 
     printf("Preenchendo a arvore...\n");
 
@@ -1250,4 +1255,17 @@ void TARVBMS_preenche_arvore(char *txt)
     }
     fclose(finput);
     printf("Total de %d entidades inseridas.\n", count);
+    FILE *fconfig = fopen("../dados/index.bin", "rb+");
+
+    if (!fconfig)
+    {
+        printf("Erro ao abrir index.bin para marcar como preenchido\n");
+        exit(1);
+    }
+    TConfig atual;
+    fread(&atual, sizeof(TConfig), 1, fconfig);
+    atual.preenchido = 1;
+    rewind(fconfig);
+    fwrite(&atual, sizeof(TConfig), 1, fconfig);
+    fclose(fconfig);
 }

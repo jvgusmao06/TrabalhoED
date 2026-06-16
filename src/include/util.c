@@ -28,22 +28,6 @@ int compara_entidades_por_nome(TD *e1, TD *e2)
     return strcmp(nome1, nome2);
 }
 
-int compara_nomes_com_entidades(char *nome, TD *entidade)
-{
-    char nome2[100];
-
-    if (entidade->tipo == TIPO_PESSOA)
-    {
-        strcpy(nome2, entidade->dados.pessoa.nome);
-    }
-    else
-    {
-        strcpy(nome2, entidade->dados.filme.titulo);
-    }
-
-    return strcmp(nome, nome2);
-}
-
 void le_no_interno(FILE *f, long posicao, TARVBMSDADOS *infos,
                    char (*ids)[TAM_NOME], long *filhos, char (*arq_folha)[TAM_ARQ_FOLHA])
 {

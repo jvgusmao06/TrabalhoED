@@ -5,6 +5,7 @@
 #include "TD.h"
 
 #define TAM_NOME 100
+#define TAM_SUB 200
 #define TAM_ARQ_FOLHA 30
 
 #define PESSOA 1

@@ -3,43 +3,45 @@
 #include <string.h>
 #include "header/TARVBMS.h"
 #include "header/TD.h"
+#include "header/interface.h"
 
 // Função auxiliar para poupar linhas na hora de inserir
-void insere_pessoa(char *nome, int ano) {
-    TD ent;
-    ent.tipo = TIPO_PESSOA;
-    strcpy(ent.dados.pessoa.nome, nome);
-    ent.dados.pessoa.ano = ano;
-    TARVBMS_insere(&ent);
-}
-
 int main() 
 {
-    int t = 2;
+    int t = escolhe_t();
+
     TARVBMS_inicializa(t);
-    TARVBMS_preenche_arvore("../entrada/Nodes.txt");
-    TARVBMS_retira("The Matrix");
-    TARVBMS_retira("Zach Grenier");
-    insere_pessoa("Aini goat",10);
-    insere_pessoa("Jini goat",10);
-    insere_pessoa("Kini goat",10);
-    insere_pessoa("Lini goat",10);
-    TARVBMS_retira("Laurence Fishburne");
-    TARVBMS_retira("Jini goat");
-    TARVBMS_retira("Lana Wachowski");
-    TARVBMS_retira("Kini goat");
-    TARVBMS_retira("Keanu Reeves");
-    TARVBMS_retira("The Devil's Advocate");
-    TARVBMS_retira("The Matrix Reloaded");
-    TARVBMS_retira("The Matrix Revolutions");
-    TARVBMS_retira("Tom Cruise");
 
+    int e;
+    while(1){
+        printf("================================================================================================================================================\n");
+        printf("Digite:\n0: para preencher\n1: para inserir\n2: para remover\n3: para imprimir a àrvore\n4: para ir para as questões\n-1: para parar o programa:\n");
+        scanf("%d", &e);
 
+        switch (e)
+        {
+        case 0:
+            TARVBMS_preenche_arvore("../entrada/Nodes.txt");
+            break;
+        case 1:
+            insere_entidades();
+            break;
+        case 2:
+            remove_entidades();
+            break;
+        case 3:
+            TARVBMS_imprime();
+            break;
+        case 4:
+            questoes();
+            break;
+        case -1:
+            return 0;
+        
+        default:
+            break;
+        }
+    }
 
-
-
-    printf("\n\n\n\n\n");
-    TARVBMS_imprime();
-    //TARVBMS_imprime_folhas();
     return 0;
 }

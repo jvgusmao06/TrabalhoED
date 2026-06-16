@@ -9,6 +9,7 @@ typedef struct
     int t;
     long raiz;
     int indice;
+    int preenchido;
 } TConfig;
 
 int compara_entidades_por_nome(TD *e1, TD *e2);
