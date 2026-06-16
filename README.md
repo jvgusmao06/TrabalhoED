@@ -1,11 +1,11 @@
 ### Roteiro de compilação:
     - Troque para src:
-    ```markdown
+        ```markdown
         cd src
     - Compile o projeto:
-    ``` markdown
+        ``` markdown
         gcc main.c include/TARVBMS.c include/TFOLHA.c include/TD.c include/interface.c -o main
     - Rode o projeto:
-    ```markdown
+        ```markdown
         ./main
 
