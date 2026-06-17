@@ -9,10 +9,10 @@
 
 #define TAM_HASH 400
 
-#define arqDado "hash_dados.bin"
-#define arqHashFilme "hash_filme_chaves.bin"
-#define arqHashPessoa "hash_pessoa_chaves.bin"
-#define arqPosLivre "hash_livres.bin"
+#define arqDado "../saida/hash_dados.bin"
+#define arqHashFilme "../saida/hash_filme_chaves.bin"
+#define arqHashPessoa "../saida/hash_pessoa_chaves.bin"
+#define arqPosLivre "../saida/hash_livres.bin"
 
 typedef enum
 {
@@ -81,6 +81,7 @@ void TR_retira_pessoa(char *pessoa);
 
 // Impressão FOI!!!
 void TR_imprime_relacoes_filme(char *filme);
+void TR_imprime_relacoes_pessoa(char *pessoa);
 void TR_menu();
 
 #endif
