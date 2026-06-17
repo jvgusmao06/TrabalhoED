@@ -4,24 +4,53 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <ctype.h>
+
+int le_inteiro(char *mensagem){
+    int valido;
+    char buffer[10];
+    int valor;
+
+    printf("%s", mensagem);
+    do{
+        valido = 1;
+        scanf(" %9[^\n]", buffer);
+        
+        for(int i = 0; buffer[i]!= '\0'; i++){
+            if(i == 0 && buffer[i] == '-'){
+                continue;
+            }
+
+            if(!isdigit(buffer[i])){
+                valido = 0;
+                break;
+            }
+        }
+        if(!valido){
+            printf("Entrada inválida! Digite um numero valido:\n");
+        }
+
+    }while(!valido);
+    valor = atoi(buffer);
+    return valor;
+}
 
 int escolhe_t()
 {
-    int t;
-    printf("Digite o t da árvore:\n");
-    scanf("%d", &t);
+    int t = le_inteiro("Digite o t da arvore:\n");
     if(t < 2) t = 2;
     return t;
 }
 
 void insere_entidades()
 {
+    char buffer[10];
+    int tipo;
     while (1)
     {
-        int tipo;
         printf("================================================================================================================================================\n");
-        printf("Digite o tipo da sua entidade:\n1: para pessoa\n2: para filme\n-1: para parar de inserir\n");
-        scanf("%d", &tipo);
+        tipo = le_inteiro("Digite o tipo da sua entidade:\n1: para pessoa\n2: para filme\n-1: para parar de inserir\n");
+
         if (tipo == -1)
         {
             return;
@@ -35,8 +64,7 @@ void insere_entidades()
             int ano;
             printf("Digite o nome da pessoa:\n");
             scanf(" %99[^\n]", nome);
-            printf("Digite o ano de nascimento\n");
-            scanf("%d", &ano);
+            ano = le_inteiro("Digite o ano de nascimento\n");
 
             strcpy(entidade->dados.pessoa.nome, nome);
             entidade->dados.pessoa.ano = ano;

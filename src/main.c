@@ -15,8 +15,7 @@ int main()
     int e;
     while(1){
         printf("================================================================================================================================================\n");
-        printf("Digite:\n0: para preencher\n1: para inserir\n2: para remover\n3: para imprimir a àrvore\n4: para ir para as questões\n-1: para parar o programa:\n");
-        scanf("%d", &e);
+        e = le_inteiro("Digite:\n0: para preencher\n1: para inserir\n2: para remover\n3: para imprimir a àrvore\n4: para ir para as questões\n-1: para parar o programa:\n");
 
         switch (e)
         {
@@ -39,7 +38,7 @@ int main()
             return 0;
         
         default:
-            break;
+            break;;
         }
     }
 
