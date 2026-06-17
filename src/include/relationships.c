@@ -81,9 +81,10 @@ void preenche_hashes(char *txt)
 {
     FILE *fteste = fopen(arqDado, "rb");
     fseek(fteste, 0, SEEK_END);
-    if (ftell(fteste) > sizeof(TR))
-        return; // Arquivo ja preenchido com Relationships.txt
-    fclose(fteste);
+    if (ftell(fteste) > sizeof(TR)){ // Arquivo ja preenchido com Relationships.txt
+        fclose(fteste);
+        return;
+    }
     FILE *finput = fopen(txt, "r");
     if (!finput)
         exit(1);

@@ -1,5 +1,8 @@
-#include "src/header/TARVBMS.h"
-#include "src/header/relationships.h"
+#ifndef QUESTOES_H
+#define QUESTOES_H
+
+#include "TARVBMS.h"
+#include "relationships.h"
 
 typedef struct {
     char pessoaA[50];
@@ -12,5 +15,9 @@ typedef struct {
     int count;
 } Frequencia;
 
-void todos_trab_juntos();
 void insere_par(char* a, char* b, int* npares, int* cap_par, Par** pares);
+void QA();
+void QB();
+void QC();
+
+#endif 

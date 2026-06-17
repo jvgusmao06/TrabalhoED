@@ -5,7 +5,7 @@
 ```
 2. Compile o projeto:
 ```bash
-   gcc main.c include/TARVBMS.c include/TFOLHA.c include/TD.c include/interface.c -o main
+   gcc main.c include/TARVBMS.c include/TFOLHA.c include/TD.c include/interface.c include/relationships.c include/questoes.c -o main
 ```
 3. Rode o projeto:
 ```bash

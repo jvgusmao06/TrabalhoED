@@ -108,7 +108,7 @@ TFOLHA *TFOLHA_carrega(char *nome)
             le_no_interno(f, pos_atual, &no_infos, ids, filhos, arq_folha);
 
             int i = 0;
-            while (i < no_infos.nchaves && strcmp(nome, ids[i]) >= 0)
+            while (i < no_infos.nchaves && strcasecmp(nome, ids[i]) >= 0)
                 i++;
 
             if (no_infos.filho_folha)
@@ -138,7 +138,7 @@ TFOLHA *TFOLHA_carrega(char *nome)
         else
             strcpy(chave, folha->entidades[i].dados.filme.titulo);
 
-        if (strcmp(chave, nome) == 0)
+        if (strcasecmp(chave, nome) == 0)
             return folha; /* Encontrado! */
     }
 

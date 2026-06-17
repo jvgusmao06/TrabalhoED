@@ -1,6 +1,7 @@
 #include "../header/interface.h"
 #include "../header/TD.h"
 #include "../header/TARVBMS.h"
+#include "../header/questoes.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -113,15 +114,6 @@ void remove_entidades()
     }
 }
 
-void Qa(){
-}
-
-void Qb(){
-}
-
-void Qc(){
-}
-
 void questoes()
 {
     char buffer[10];
@@ -129,21 +121,15 @@ void questoes()
     scanf(" %9[^\n]", buffer);
 
     if(strcmp(buffer, "-1") == 0) return;
-    
-    switch (buffer[0])
-    {
-    case 'a':
-        Qa();
-        break;
-    case 'b':
-        Qb();
-        break;
-    case 'c':
-        Qc();
-        break;
-    default:
+
+    else if(strcasecmp(buffer, "a") == 0) QA();
+
+    else if(strcasecmp(buffer, "b") == 0) QB();
+
+    else if(strcasecmp(buffer, "c") == 0) QC();
+
+    else{
         printf("Questão não exite ou não fizemos essa questão:\n");
         questoes();
-        break;
     }
 }

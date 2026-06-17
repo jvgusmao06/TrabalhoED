@@ -26,7 +26,7 @@ int compara_entidades_por_nome(TD *e1, TD *e2)
         strcpy(nome2, e2->dados.filme.titulo);
     }
 
-    return strcmp(nome1, nome2);
+    return strcasecmp(nome1, nome2);
 }
 
 void le_no_interno(FILE *f, long posicao, TARVBMSDADOS *infos,
@@ -44,7 +44,7 @@ void le_no_interno(FILE *f, long posicao, TARVBMSDADOS *infos,
     fread(filhos, sizeof(long), max_chaves + 1, f);
 }
 
-void trim(char* str){
+void trim_a(char* str){
 
     int inicio = 0;
     while(str[inicio] == ' ') inicio++;
@@ -86,7 +86,7 @@ void TARVBMS_inicializa(int t)
         exit(1);
     }
     TConfig temp;
-    temp.t = t;
+    temp.t = t; 
     temp.raiz = -1;
     temp.indice = 0;
     temp.preenchido = 0;
@@ -388,7 +388,7 @@ void TARVBMS_insere_nao_completo(FILE *f, long pos_no, TD *entidade, int t)
 
     /* Encontra o índice do filho correto */
     int i = infos.nchaves - 1;
-    while (i >= 0 && strcmp(chave, ids[i]) < 0)
+    while (i >= 0 && strcasecmp(chave, ids[i]) < 0)
         i--;
     i++;
 
@@ -420,7 +420,7 @@ void TARVBMS_insere_nao_completo(FILE *f, long pos_no, TD *entidade, int t)
             le_no_interno(f, pos_no, &infos, ids, filhos, arq_folha);
 
             /* Decide para qual folha ir */
-            if (strcmp(chave, ids[i]) >= 0)
+            if (strcasecmp(chave, ids[i]) >= 0)
                 i++;
             sscanf(arq_folha[i], "folha_%d.bin", &indice_folha);
         }
@@ -447,7 +447,7 @@ void TARVBMS_insere_nao_completo(FILE *f, long pos_no, TD *entidade, int t)
             /* Relê o nó pai */
             le_no_interno(f, pos_no, &infos, ids, filhos, arq_folha);
 
-            if (strcmp(chave, ids[i]) > 0)
+            if (strcasecmp(chave, ids[i]) > 0)
                 i++;
             pos_filho = filhos[i];
         }
@@ -598,7 +598,7 @@ int TARVBMS_remove_da_folha(int indice_folha, char *chave, int t)
             strcpy(chave_atual, folha->entidades[i].dados.filme.titulo);
         }
 
-        if (strcmp(chave_atual, chave) == 0)
+        if (strcasecmp(chave_atual, chave) == 0)
         {
             encontra = 1;
             break;
@@ -635,7 +635,7 @@ void TARVBMS_removezada(FILE *f, long pos_no, char *chave, int t)
     le_no_interno(f, pos_no, &info, vet_chaves, filhos, arq_folha);
 
     int i = 0;
-    while (i < info.nchaves && strcmp(chave, vet_chaves[i]) >= 0)
+    while (i < info.nchaves && strcasecmp(chave, vet_chaves[i]) >= 0)
         i++;
 
     if (info.filho_folha == 1)
@@ -1195,7 +1195,7 @@ void TARVBMS_imprime_folhas()
         free(folha->entidades);
         free(folha);
 
-        if (strcmp(prox, "-1") == 0)
+        if (strcasecmp(prox, "-1") == 0)
             break;
         sscanf(prox, "folha_%d.bin", &indice_folha);
     }
@@ -1247,14 +1247,14 @@ void TARVBMS_preenche_arvore(char *txt)
         char *token = strtok(copia, "|");
         if (!token)
             continue;
-        trim(token);
+        trim_a(token);
 
-        if (strcmp(token, "Movie") == 0)
+        if (strcasecmp(token, "Movie") == 0)
         {
             token = strtok(NULL, "|");
             if (!token)
                 continue;
-            trim(token);
+            trim_a(token);
             char titulo[TAM_NOME];
             strncpy(titulo, token, sizeof(titulo) - 1);
             titulo[sizeof(titulo) - 1] = '\0';
@@ -1262,14 +1262,14 @@ void TARVBMS_preenche_arvore(char *txt)
             token = strtok(NULL, "|");
             if (!token)
                 continue;
-            trim(token);
+            trim_a(token);
             int ano = (int)strtol(token, NULL, 10);
 
             token = strtok(NULL, "|");
             char sub[200];
             if (token)
             {
-                trim(token);
+                trim_a(token);
                 strncpy(sub, token, sizeof(sub) - 1);
                 sub[sizeof(sub) - 1] = '\0';
             }
@@ -1286,12 +1286,12 @@ void TARVBMS_preenche_arvore(char *txt)
             TARVBMS_insere(&entidade);
             count++;
         }
-        else if (strcmp(token, "Person") == 0)
+        else if (strcasecmp(token, "Person") == 0)
         {
             token = strtok(NULL, "|");
             if (!token)
                 continue;
-            trim(token);
+            trim_a(token);
             char nome[TAM_NOME];
             strncpy(nome, token, sizeof(nome) - 1);
             nome[sizeof(nome) - 1] = '\0';
@@ -1299,7 +1299,7 @@ void TARVBMS_preenche_arvore(char *txt)
             token = strtok(NULL, "|");
             if (!token)
                 continue;
-            trim(token);
+            trim_a(token);
             int ano = (int)strtol(token, NULL, 10);
 
             TD entidade;
