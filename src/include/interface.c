@@ -113,7 +113,37 @@ void remove_entidades()
     }
 }
 
+void Qa(){
+}
+
+void Qb(){
+}
+
+void Qc(){
+}
+
 void questoes()
 {
-    return;
+    char buffer[10];
+    printf("Digite a letra da questão que você quer ou -1 para sair de questoes:\n");
+    scanf(" %9[^\n]", buffer);
+
+    if(strcmp(buffer, "-1") == 0) return;
+    
+    switch (buffer[0])
+    {
+    case 'a':
+        Qa();
+        break;
+    case 'b':
+        Qb();
+        break;
+    case 'c':
+        Qc();
+        break;
+    default:
+        printf("Questão não exite ou não fizemos essa questão:\n");
+        questoes();
+        break;
+    }
 }
