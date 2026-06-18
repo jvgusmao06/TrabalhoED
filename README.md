@@ -13,6 +13,6 @@ gcc main.c include/TARVBMS.c include/TFOLHA.c include/TD.c include/interface.c i
 ```
 
 ### Feito por:
-   -Carlos Seiji Yamasaki Magno
-   -Joao Vitor Gusmao de Souza
-   -Rafael Gusmao Correa
+    -Carlos Seiji Yamasaki Magno
+    -Joao Vitor Gusmao de Souza
+    -Rafael Gusmao Correa
