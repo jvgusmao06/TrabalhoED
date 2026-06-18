@@ -116,13 +116,12 @@ void remove_entidades()
 
 void questoes()
 {
-    while(1){
     char buffer[10];
     printf("================================================================================================================================================\n");
     printf("Digite a letra da questao que voce quer ou -1 para sair de questoes:\n");
     scanf(" %9[^\n]", buffer);
 
-    if(strcmp(buffer, "-1") == 0) return;
+    if(strcasecmp(buffer, "-1") == 0) return;
 
     else if(strcasecmp(buffer, "a") == 0) QA();
 
@@ -144,8 +143,6 @@ void questoes()
 
     else if(strcasecmp(buffer, "m") == 0) QM();
 
-    else if(strcasecmp(buffer, "n") == 0); //QN();
-
     else if(strcasecmp(buffer, "o") == 0) QO();
 
     else if(strcasecmp(buffer, "p") == 0) QP();
@@ -156,5 +153,4 @@ void questoes()
         printf("Questao nao exite ou nao fizemos essa questao:\n");
         questoes();
     } 
-}
 }
