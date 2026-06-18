@@ -574,13 +574,14 @@ void QT()
         free(folha->entidades);
         free(folha);
         if (strcmp(prox, "-1") == 0)
-            break;
+        break;
         sscanf(prox, "folha_%d.bin", &ind);
     }
     if (!achou)
     {
         printf("Nenhum ator encontrado\n");
     }
+    free(anos_filme);
 }
 
 void QH()
