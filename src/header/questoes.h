@@ -19,5 +19,15 @@ void insere_par(char* a, char* b, int* npares, int* cap_par, Par** pares);
 void QA();
 void QB();
 void QC();
+void QF();
+void QG();
+void QH();
+void QI();
+void QJ();
+void QK();
+void QO();
+void QP();
+void QM();
+void QT();
 
 #endif 

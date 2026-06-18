@@ -28,7 +28,7 @@ int le_inteiro(char *mensagem){
             }
         }
         if(!valido){
-            printf("Entrada inválida! Digite um numero valido:\n");
+            printf("Entrada invalida! Digite um numero valido:\n");
         }
 
     }while(!valido);
@@ -104,7 +104,7 @@ void remove_entidades()
     while (1)
     {
         printf("================================================================================================================================================\n");
-        printf("Digite o nome ou o título de uma entidade para remover ou -1 para parar de remover\n");
+        printf("Digite o nome ou o titulo de uma entidade para remover ou -1 para parar de remover\n");
         scanf(" %99[^\n]", nome);
 
         if(strcmp(nome, "-1") == 0){
@@ -116,8 +116,10 @@ void remove_entidades()
 
 void questoes()
 {
+    while(1){
     char buffer[10];
-    printf("Digite a letra da questão que você quer ou -1 para sair de questoes:\n");
+    printf("================================================================================================================================================\n");
+    printf("Digite a letra da questao que voce quer ou -1 para sair de questoes:\n");
     scanf(" %9[^\n]", buffer);
 
     if(strcmp(buffer, "-1") == 0) return;
@@ -128,8 +130,31 @@ void questoes()
 
     else if(strcasecmp(buffer, "c") == 0) QC();
 
+    else if(strcasecmp(buffer, "f") == 0) QF();
+
+    else if(strcasecmp(buffer, "g") == 0) QG();
+
+    else if(strcasecmp(buffer, "h") == 0) QH();
+
+    else if(strcasecmp(buffer, "i") == 0) QI();
+
+    else if(strcasecmp(buffer, "j") == 0) QJ();
+
+    else if(strcasecmp(buffer, "k") == 0) QK();
+
+    else if(strcasecmp(buffer, "m") == 0) QM();
+
+    else if(strcasecmp(buffer, "n") == 0); //QN();
+
+    else if(strcasecmp(buffer, "o") == 0) QO();
+
+    else if(strcasecmp(buffer, "p") == 0) QP();
+
+    else if(strcasecmp(buffer, "t") == 0) QT();
+
     else{
-        printf("Questão não exite ou não fizemos essa questão:\n");
+        printf("Questao nao exite ou nao fizemos essa questao:\n");
         questoes();
-    }
+    } 
+}
 }
