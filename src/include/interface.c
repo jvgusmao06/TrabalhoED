@@ -1,6 +1,7 @@
 #include "../header/interface.h"
 #include "../header/TD.h"
 #include "../header/TARVBMS.h"
+#include "../header/TFOLHA.h"
 #include "../header/questoes.h"
 #include <stdio.h>
 #include <string.h>
@@ -111,6 +112,56 @@ void remove_entidades()
             return;
         }
         TARVBMS_retira(nome);
+    }
+}
+
+void busca_entidades()
+{
+    char nome[TAM_NOME];
+    while (1)
+    {
+        printf("================================================================================================================================================\n");
+        printf("Digite o nome da pessoa (ou titulo do filme) para buscar na folha ou -1 para voltar:\n");
+        scanf(" %99[^\n]", nome);
+
+        if (strcmp(nome, "-1") == 0)
+        {
+            return;
+        }
+
+        TFOLHA *folha = TFOLHA_carrega(nome);
+        if (!folha)
+        {
+            printf("Entidade \"%s\" nao encontrada na arvore!\n", nome);
+            continue;
+        }
+
+        printf("\n--- Folha Encontrada ---\n");
+        TFOLHA_imprime(folha);
+
+        for (int i = 0; i < folha->dados.nchaves; i++)
+        {
+            if (folha->entidades[i].tipo == TIPO_PESSOA &&
+                strcasecmp(folha->entidades[i].dados.pessoa.nome, nome) == 0)
+            {
+                printf("\n=== Dados da Pessoa ===\n");
+                printf("Nome: %s\n", folha->entidades[i].dados.pessoa.nome);
+                printf("Ano de nascimento: %d\n", folha->entidades[i].dados.pessoa.ano);
+                break;
+            }
+            else if (folha->entidades[i].tipo == TIPO_FILME &&
+                     strcasecmp(folha->entidades[i].dados.filme.titulo, nome) == 0)
+            {
+                printf("\n=== Dados do Filme ===\n");
+                printf("Titulo: %s\n", folha->entidades[i].dados.filme.titulo);
+                printf("Ano de lancamento: %d\n", folha->entidades[i].dados.filme.ano);
+                printf("Subtitulo: %s\n", folha->entidades[i].dados.filme.sub);
+                break;
+            }
+        }
+
+        free(folha->entidades);
+        free(folha);
     }
 }
 

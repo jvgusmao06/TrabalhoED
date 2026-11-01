@@ -17,7 +17,7 @@ int main()
     int e;
     while(1){
         printf("================================================================================================================================================\n");
-        e = le_inteiro("Digite:\n0: para preencher\n1: para inserir\n2: para remover\n3: para imprimir a arvore\n4: para ir para as questoes\n5: para ir para o menu da hash\n-1: para parar o programa:\n");
+        e = le_inteiro("Digite:\n0: para preencher\n1: para inserir\n2: para remover\n3: para buscar uma folha\n4: para imprimir a arvore\n5: para ir para as questoes\n6: para ir para o menu da hash\n-1: para parar o programa:\n");
 
         switch (e)
         {
@@ -32,12 +32,15 @@ int main()
             remove_entidades();
             break;
         case 3:
-            TARVBMS_imprime();
+            busca_entidades();
             break;
         case 4:
-            questoes();
+            TARVBMS_imprime();
             break;
         case 5:
+            questoes();
+            break;
+        case 6:
             TR_menu();
             break;
         case -1:
